@@ -1,4 +1,5 @@
-// import './globals.css'
+import GlobalWrapper from '@/components/GlobalWrapper'
+import './globals.css'
 
 export const metadata = {
   title: 'TzurAce - Poker Academy',
@@ -12,7 +13,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body style={{ margin: 0, padding: 0 }}>
+        <GlobalWrapper>
+          {children}
+        </GlobalWrapper>
+      </body>
     </html>
   )
 }
