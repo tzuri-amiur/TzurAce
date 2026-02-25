@@ -1,8 +1,10 @@
 "use client";
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Menu, Globe, Target, Zap, Shield, X, Settings, LayoutGrid, LogOut, Mic, Video, Cpu, UserCircle } from 'lucide-react';
 
 export default function LandingPage() {
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -28,6 +30,9 @@ export default function LandingPage() {
       } else {
         setIsProfileMenuOpen(!isProfileMenuOpen);
       }
+    }
+    if (name.startsWith('Trainer')) {
+      router.push('/trainer');
     }
   };
 
