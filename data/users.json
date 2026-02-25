@@ -1,0 +1,18 @@
+{
+  "tzuria": {
+    "username": "tzuria",
+    "password": "1234",
+    "mail": "tzuri.amiur@gmail.com",
+    "name": "Elitzur",
+    "nickname": "Tzuri",
+    "createdAt": "2026-02-25T15:03:30.776Z"
+  },
+  "smadarn": {
+    "username": "smadarn",
+    "password": "123456",
+    "mail": "smadarn@gmail.com",
+    "name": "Smadar",
+    "nickname": "Smady",
+    "createdAt": "2026-02-25T15:05:01.017Z"
+  }
+}
