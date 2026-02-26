@@ -12,53 +12,27 @@ type Position = 'SB' | 'BB' | 'UTG' | 'HJ' | 'CO' | 'BTN';
 // Standard Poker positions in clockwise order
 const POSITIONS: Position[] = ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'];
 
-const Card = ({ rank, suit, width = 45, height = 65 }: CardData & { width?: number, height?: number }) => {
+const Card = ({ rank, suit, width = 45, height = 65, className }: CardData & { width?: number, height?: number, className?: string }) => {
     const isRed = suit === 'hearts' || suit === 'diamonds';
     const suitIcons: Record<string, string> = {
-        hearts: '♥',
-        diamonds: '♦',
-        clubs: '♣',
-        spades: '♠'
+        hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠'
     };
 
+    const isLarge = width > 50;
+
     return (
-        <div style={{
-            width: `${width}px`,
-            height: `${height}px`,
-            backgroundColor: 'white',
-            borderRadius: '6px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: width > 50 ? '8px' : '4px',
-            boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
-            position: 'relative',
-            userSelect: 'none',
-            border: '1px solid rgba(0,0,0,0.1)'
+        <div className={`bg-white rounded-md flex flex-col justify-between shadow-2xl relative select-none border border-black/10 transition-all ${className}`} style={{
+            width: width ? `${width}px` : '100%',
+            height: height ? `${height}px` : '100%',
+            padding: isLarge ? '8px' : '4px',
         }}>
-            <div style={{
-                fontSize: width > 50 ? '20px' : '14px',
-                fontWeight: '900',
-                color: isRed ? '#ef4444' : '#111827',
-                lineHeight: '1'
-            }}>
+            <div style={{ fontSize: isLarge ? '20px' : '14px', fontWeight: '900', color: isRed ? '#ef4444' : '#111827', lineHeight: '1' }}>
                 {rank}
             </div>
-            <div style={{
-                fontSize: width > 50 ? '32px' : '20px',
-                alignSelf: 'center',
-                color: isRed ? '#ef4444' : '#111827',
-                marginBottom: '4px'
-            }}>
+            <div style={{ fontSize: isLarge ? '32px' : '20px', alignSelf: 'center', color: isRed ? '#ef4444' : '#111827', marginBottom: '4px' }}>
                 {suitIcons[suit]}
             </div>
-            <div style={{
-                fontSize: width > 50 ? '20px' : '14px',
-                fontWeight: '900',
-                color: isRed ? '#ef4444' : '#111827',
-                transform: 'rotate(180deg)',
-                lineHeight: '1'
-            }}>
+            <div style={{ fontSize: isLarge ? '20px' : '14px', fontWeight: '900', color: isRed ? '#ef4444' : '#111827', transform: 'rotate(180deg)', lineHeight: '1' }}>
                 {rank}
             </div>
         </div>
@@ -444,23 +418,8 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
             </div>
 
             {/* Table Container */}
-            <div style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '0 0 100px 0',
-                marginTop: '-40px'
-            }}>
-                <div style={{
-                    position: 'relative',
-                    width: '100%',
-                    maxWidth: '1000px',
-                    aspectRatio: '16/9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
+            <div className="flex-1 flex items-center justify-center overflow-hidden h-full pb-24 md:pb-0">
+                <div className="relative w-full max-w-[1000px] aspect-video flex items-center justify-center scale-[0.55] sm:scale-75 md:scale-100 origin-center transition-transform duration-500">
                     {/* The Poker Table */}
                     <div style={{
                         width: '85%',
@@ -545,15 +504,14 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                         return (
                             <div
                                 key={seat.id}
+                                className="absolute scale-[0.85] md:scale-100 transition-all duration-500"
                                 style={{
-                                    position: 'absolute',
                                     top: seat.top,
                                     left: seat.left,
                                     right: seat.right,
                                     bottom: seat.bottom,
                                     transform: seat.translate ? `translate(${seat.translate})` : 'none',
-                                    zIndex: 10,
-                                    transition: 'all 0.5s ease-in-out'
+                                    zIndex: 10
                                 }}
                             >
                                 {/* CHILD ANCHORED Bet Area */}
@@ -593,20 +551,12 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
 
                                 {!isFolded && (
                                     isHero ? (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '-135px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            display: 'flex',
-                                            gap: '0px',
-                                            zIndex: 15
-                                        }}>
-                                            <div style={{ transform: 'rotate(-5deg)' }}>
-                                                <Card {...heroCards[0]} width={85} height={125} />
+                                        <div className="absolute -top-[100px] md:-top-[135px] left-1/2 -translate-x-1/2 flex gap-0 z-[15]">
+                                            <div className="rotate-[-5deg] w-16 h-24 md:w-[85px] md:h-[125px]">
+                                                <Card {...heroCards[0]} width={undefined} height={undefined} />
                                             </div>
-                                            <div style={{ transform: 'rotate(5deg)', marginLeft: '-25px' }}>
-                                                <Card {...heroCards[1]} width={85} height={125} />
+                                            <div className="rotate-[5deg] -ml-[30px] w-16 h-24 md:w-[85px] md:h-[125px]">
+                                                <Card {...heroCards[1]} width={undefined} height={undefined} />
                                             </div>
                                         </div>
                                     ) : (
@@ -668,58 +618,37 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
             </div>
 
             {/* Action Buttons Bar */}
-            <div style={{
-                position: 'fixed',
-                bottom: '60px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '20px',
-                zIndex: 50
-            }}>
+            <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 bg-slate-950/90 backdrop-blur-xl border-t border-white/10 grid grid-cols-2 gap-3 z-50 md:relative md:bottom-auto md:left-auto md:right-auto md:bg-transparent md:border-none md:p-0 md:flex md:flex-row md:items-center md:justify-center md:gap-5">
                 <button
                     onClick={() => handleAction('FOLD')}
-                    style={{ ...buttonStyle, backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171' }}
-                    className="action-btn"
+                    style={{ ...buttonStyle }}
+                    className="action-btn bg-red-500/10 border border-red-500/50 text-red-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
                 >
                     FOLD
                 </button>
                 <button
                     onClick={() => handleAction('CALL')}
-                    style={{ ...buttonStyle, backgroundColor: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', color: '#60a5fa' }}
-                    className="action-btn"
+                    style={{ ...buttonStyle }}
+                    className="action-btn bg-blue-500/10 border border-blue-500/50 text-blue-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
                 >
                     CALL
                 </button>
                 <button
                     onClick={() => handleAction('RAISE')}
-                    style={{ ...buttonStyle, backgroundColor: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399' }}
-                    className="action-btn"
+                    style={{ ...buttonStyle }}
+                    className="action-btn bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
                 >
                     RAISE
                 </button>
 
-                {/* Hint Button */}
                 <button
                     onClick={toggleHint}
-                    style={{
-                        ...buttonStyle,
-                        minWidth: '60px',
-                        padding: '12px',
-                        backgroundColor: showHint ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                        border: showHint ? '1px solid #fbbf24' : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: showHint ? '#fbbf24' : '#94a3b8',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                    }}
-                    className="action-btn"
+                    style={{ ...buttonStyle, minWidth: 'unset' }}
+                    className={`action-btn flex items-center justify-center gap-2 py-2 px-4 text-sm md:py-3 md:px-4 ${showHint ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-white/5 border-white/10 text-slate-400'}`}
                     title="Toggle Range Hint"
                 >
-                    <span style={{ fontSize: '20px' }}>💡</span>
-                    <span style={{ fontSize: '12px' }}>{showHint ? 'HIDE' : 'HINT'}</span>
+                    <span className="text-lg md:text-xl">💡</span>
+                    <span className="text-xs md:text-sm font-black">{showHint ? 'HIDE' : 'HINT'}</span>
                 </button>
             </div>
 
