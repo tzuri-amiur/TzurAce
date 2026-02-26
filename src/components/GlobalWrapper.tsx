@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import GlobalHeader from './GlobalHeader';
 import GlobalSidebar from './GlobalSidebar';
 import AuthModal from './AuthModal';
+import { TrainerSettingsProvider } from '../context/TrainerSettingsContext';
 
 export default function GlobalWrapper({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -31,7 +32,7 @@ export default function GlobalWrapper({ children }: { children: React.ReactNode 
     };
 
     return (
-        <>
+        <TrainerSettingsProvider>
             <GlobalHeader
                 onOpenSidebar={() => setIsSidebarOpen(true)}
                 onOpenAuth={() => setIsAuthModalOpen(true)}
@@ -51,6 +52,6 @@ export default function GlobalWrapper({ children }: { children: React.ReactNode 
                 onSuccess={handleAuthSuccess}
             />
             {children}
-        </>
+        </TrainerSettingsProvider>
     );
 }
