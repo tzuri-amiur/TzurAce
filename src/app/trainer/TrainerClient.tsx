@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { getHandRank, isHandInRange } from '@/utils/rangeUtils';
+import { getHandRank, isHandInRange, RFI_RANGES } from '@/utils/rangeUtils';
 import { getRandomHand, getCardsFromHand, CardData } from '@/utils/handUtils';
 import { useTrainerSettings, Position as TrainingPosition } from '@/context/TrainerSettingsContext';
+import HandGrid from './HandGrid';
 
 type Position = 'SB' | 'BB' | 'UTG' | 'HJ' | 'CO' | 'BTN';
 
@@ -116,6 +117,11 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     const router = useRouter();
     const { settings } = useTrainerSettings();
     const [mounted, setMounted] = useState(false);
+    const [showHint, setShowHint] = useState(false);
+    const [modalData, setModalData] = useState<{
+        type: 'ERROR' | 'HINT';
+        message: string;
+    } | null>(null);
 
     useEffect(() => {
         setMounted(true);
@@ -142,10 +148,56 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         }
     }, [settings.heroPosition]);
 
-    // Shuffle logic
-    const handleAction = () => {
+    // Accessibility: ESC to close modal
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setShowHint(false);
+                setModalData(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Shuffle and Action Logic
+    const handleAction = (userAction?: 'FOLD' | 'CALL' | 'RAISE') => {
+        const pos = getPositionLabel(5);
+        const isInRange = isHandInRange(currentHand, pos);
+
+        // Define correct GTO move based on scenario
+        // In RFI, we only Open Raise or Fold. Call should be caught as Limp error.
+        let correctAction: 'FOLD' | 'CALL' | 'RAISE' = isInRange ? 'RAISE' : 'FOLD';
+
+        // Validation Logic
+        if (userAction) {
+            if (userAction !== correctAction) {
+                let errorExplanation = '';
+                if (userAction === 'CALL') {
+                    errorExplanation = `Limping is not part of a GTO strategy. You should have ${correctAction}ed instead.`;
+                } else if (userAction === 'FOLD' && correctAction === 'RAISE') {
+                    errorExplanation = `This hand is strong enough to Open Raise from ${pos}. You missed value by folding.`;
+                } else if (userAction === 'RAISE' && correctAction === 'FOLD') {
+                    errorExplanation = `This hand is too weak to Open Raise from ${pos}. It should be a clean fold.`;
+                }
+
+                setModalData({
+                    type: 'ERROR',
+                    message: errorExplanation
+                });
+                setShowHint(true);
+                return; // Don't shuffle yet, let them see the error
+            }
+        }
+
+        // Success move - hide hint and shuffle
+        setShowHint(false);
+        setModalData(null);
+
         if (settings.heroPosition === 'RANDOM') {
-            setHeroGamePosition((prev) => (prev + 1) % 6);
+            const rfiIndices = [0, 2, 3, 4, 5]; // Excluding index 1 (BB)
+            const randomIdx = rfiIndices[Math.floor(Math.random() * rfiIndices.length)];
+            setHeroGamePosition(randomIdx);
         }
 
         // Randomize hand on every action
@@ -156,6 +208,19 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         // Log rank for verification
         const rank = getHandRank(newHand);
         console.log(`[Action] New hand: ${newHand} (Rank: ${rank}/169)`);
+    };
+
+    const toggleHint = () => {
+        if (!showHint) {
+            setModalData({
+                type: 'HINT',
+                message: `Study the GTO opening range for ${getPositionLabel(5)}.`
+            });
+            setShowHint(true);
+        } else {
+            setShowHint(false);
+            setModalData(null);
+        }
     };
 
     // Static visual seats (Hero is always visual seat 5)
@@ -221,6 +286,78 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
             padding: '20px',
             overflow: 'hidden'
         }}>
+            {/* Feedback Modal Overlay */}
+            {showHint && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 200,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        width: '100%',
+                        maxWidth: '550px',
+                        backgroundColor: '#0f172a',
+                        borderRadius: '24px',
+                        border: `2px solid ${modalData?.type === 'ERROR' ? '#ef4444' : '#10b981'}`,
+                        padding: '32px',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '24px',
+                        position: 'relative',
+                        animation: 'modalSlideUp 0.3s ease-out'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{
+                                backgroundColor: modalData?.type === 'ERROR' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                color: modalData?.type === 'ERROR' ? '#ef4444' : '#10b981',
+                                padding: '6px 12px',
+                                borderRadius: '100px',
+                                fontSize: '12px',
+                                fontWeight: '900',
+                                letterSpacing: '1px'
+                            }}>
+                                {modalData?.type || 'HINT'}
+                            </div>
+                            <button
+                                onClick={() => { setShowHint(false); setModalData(null); }}
+                                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '20px' }}
+                            >✕</button>
+                        </div>
+
+                        <div>
+                            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', color: 'white' }}>
+                                {modalData?.type === 'ERROR' ? 'Wrong Move!' : `${getPositionLabel(5)} Range`}
+                            </h2>
+                            <p style={{ color: '#94a3b8', fontSize: '15px', lineHeight: '1.5' }}>
+                                {modalData?.message}
+                            </p>
+                        </div>
+
+                        <HandGrid currentPosition={getPositionLabel(5)} currentHandNotation={currentHand} />
+
+                        <button
+                            onClick={() => { setShowHint(false); setModalData(null); }}
+                            style={{
+                                ...buttonStyle,
+                                width: '100%',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                marginTop: '8px'
+                            }}
+                        >
+                            GOT IT
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Page Title */}
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px', letterSpacing: '2px' }}>
@@ -228,7 +365,7 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 </div>
             </div>
 
-            {/* Table Container - Shifted Higher */}
+            {/* Table Container */}
             <div style={{
                 flex: 1,
                 display: 'flex',
@@ -246,11 +383,10 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}>
-
                     {/* The Poker Table */}
                     <div style={{
-                        width: '80%',
-                        height: '70%',
+                        width: '85%',
+                        height: '75%',
                         backgroundColor: '#065f46',
                         borderRadius: '1000px',
                         border: '12px solid #111827',
@@ -401,29 +537,52 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 left: '50%',
                 transform: 'translateX(-50%)',
                 display: 'flex',
+                alignItems: 'center',
                 gap: '20px',
                 zIndex: 50
             }}>
                 <button
-                    onClick={handleAction}
+                    onClick={() => handleAction('FOLD')}
                     style={{ ...buttonStyle, backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171' }}
                     className="action-btn"
                 >
                     FOLD
                 </button>
                 <button
-                    onClick={handleAction}
+                    onClick={() => handleAction('CALL')}
                     style={{ ...buttonStyle, backgroundColor: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', color: '#60a5fa' }}
                     className="action-btn"
                 >
-                    {settings.scenario === 'RFI' ? 'CALL' : 'CALL'}
+                    CALL
                 </button>
                 <button
-                    onClick={handleAction}
+                    onClick={() => handleAction('RAISE')}
                     style={{ ...buttonStyle, backgroundColor: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399' }}
                     className="action-btn"
                 >
-                    {settings.scenario === 'RFI' ? 'RAISE' : '3-BET'}
+                    RAISE
+                </button>
+
+                {/* Hint Button */}
+                <button
+                    onClick={toggleHint}
+                    style={{
+                        ...buttonStyle,
+                        minWidth: '60px',
+                        padding: '12px',
+                        backgroundColor: showHint ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        border: showHint ? '1px solid #fbbf24' : '1px solid rgba(255, 255, 255, 0.1)',
+                        color: showHint ? '#fbbf24' : '#94a3b8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                    }}
+                    className="action-btn"
+                    title="Toggle Range Hint"
+                >
+                    <span style={{ fontSize: '20px' }}>💡</span>
+                    <span style={{ fontSize: '12px' }}>{showHint ? 'HIDE' : 'HINT'}</span>
                 </button>
             </div>
 
@@ -432,6 +591,11 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                     0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
                     70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
                     100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+                }
+
+                @keyframes modalSlideUp {
+                    from { transform: translateY(30px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
                 }
 
                 .action-btn:hover {

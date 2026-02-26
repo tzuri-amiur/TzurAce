@@ -2,15 +2,15 @@ import { HAND_RANKINGS } from '../data/handRankings';
 import { CardData } from './handUtils';
 
 /**
- * Maps standard poker positions to their typical opening range percentages.
+ * Maps standard 6-Max poker positions to GTO opening percentages (RFI).
  */
-export const POSITIONAL_RANGES: Record<string, number> = {
-    UTG: 0.15,
-    HJ: 0.20,
-    CO: 0.26,
-    BTN: 0.45,
-    SB: 0.50,
-    BB: 1.00
+export const RFI_RANGES: Record<string, number> = {
+    UTG: 15,
+    HJ: 18,
+    CO: 26,
+    BTN: 42,
+    SB: 45,
+    BB: 100 // Default defending, though not usually RFI
 };
 
 const RANK_VALUES: Record<string, number> = {
@@ -55,6 +55,7 @@ export function getHandRank(handOrCard1: string | CardData, card2?: CardData): n
  */
 export function isHandInRange(hand: string, position: string): boolean {
     const rank = getHandRank(hand);
-    const rangePercent = POSITIONAL_RANGES[position] || 0;
-    return (rank / 169) <= rangePercent;
+    const rangePercent = RFI_RANGES[position] || 0;
+    // Calculate percentage: (rank / 169) * 100
+    return (rank / 169) * 100 <= rangePercent;
 }
