@@ -2,8 +2,12 @@ import GlobalWrapper from '@/components/GlobalWrapper'
 import './globals.css'
 
 export const metadata = {
-  title: 'TzurAce - Poker Academy',
-  description: 'Master the Science of Poker',
+  title: 'TzurAce | Poker Pre-flop Trainer',
+  description: 'Master the science of poker pre-flop decisions with professional ranges.',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({

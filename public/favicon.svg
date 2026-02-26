@@ -1,0 +1,10 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Symmetrical Professional Black Spade (Tailored to Reference) -->
+  <path d="M16 2.5 C16 2.5 4 14.5 4 21 C4 27 11 27 14 24 C14 24 13 30 11 31.5 H21 C19 30 18 24 18 24 C21 27 28 27 28 21 C28 14.5 16 2.5 16 2.5 Z" fill="black"/>
+  
+  <!-- "Smeared" T - Distorted into the left lobe -->
+  <path d="M7 19 C7 16 9 13.5 13.5 13 L13.7 14.5 H11.5 V21 H9.5 V15 H7.8 L7 19Z" fill="#10b981"/>
+  
+  <!-- "Smeared" A - Distorted into the right lobe -->
+  <path d="M18.5 13 C23 13.5 25 16 25 19 L23.5 19.5 L23 17.5 H19.5 L19 19.5 H17.5 L18.5 13 Z M20 16 H22 L21 14.5 L20 16Z" fill="#10b981"/>
+</svg>
