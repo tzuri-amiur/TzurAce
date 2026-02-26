@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Home, X, LogOut, LayoutGrid, Settings, Target, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { useTrainerSettings, Position, Scenario } from '../context/TrainerSettingsContext';
 
@@ -14,8 +14,14 @@ interface GlobalSidebarProps {
 
 export default function GlobalSidebar({ isOpen, onClose, currentUser, onLogout, onOpenAuth }: GlobalSidebarProps) {
     const router = useRouter();
+    const pathname = usePathname();
     const { settings, updateSettings } = useTrainerSettings();
-    const [isTrainerSettingsOpen, setIsTrainerSettingsOpen] = useState(true);
+    const [isTrainerSettingsOpen, setIsTrainerSettingsOpen] = useState(pathname === '/trainer');
+
+    // Automatically open/close settings when navigating
+    useEffect(() => {
+        setIsTrainerSettingsOpen(pathname === '/trainer');
+    }, [pathname]);
 
     const handleNav = (path: string) => {
         router.push(path);
