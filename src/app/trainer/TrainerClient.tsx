@@ -108,6 +108,72 @@ const CardBack = ({ width = 45, height = 65 }: { width?: number, height?: number
     );
 };
 
+const ChipStack = ({ count = 1, size = 26, amount }: { count?: number, size?: number, amount?: string }) => {
+    return (
+        <div style={{ position: 'relative', width: size, height: size + (count - 1) * 2 }}>
+            {[...Array(count)].map((_, i) => (
+                <div key={i} style={{
+                    position: 'absolute',
+                    bottom: i * 2, // 2px vertical offset for 3D effect
+                    width: size,
+                    height: size,
+                    backgroundColor: '#ef4444',
+                    borderRadius: '50%',
+                    border: '2px dashed rgba(255,255,255,0.4)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '10px',
+                    fontWeight: '900',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                    zIndex: i
+                }}>
+                    {/* Numerical label on top chip face (always "0.5" per image_5) */}
+                    {(i === count - 1 || count === 1) && (
+                        <div style={{ transform: 'scale(0.9)', pointerEvents: 'none' }}>0.5</div>
+                    )}
+                    {/* Inner ring decoration */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '4px',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '50%'
+                    }} />
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const BetArea = ({ amount, label }: { amount: string, label: string }) => {
+    const chipCount = amount === '0.5' ? 1 : 2;
+    return (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1px',
+            animation: 'fadeIn 0.5s ease-out'
+        }}>
+            <ChipStack count={chipCount} />
+            <div style={{
+                fontSize: '9px', // Slightly smaller for neatness
+                fontWeight: '900',
+                color: 'white',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                padding: '1px 4px',
+                borderRadius: '3px',
+                marginTop: '1px',
+                whiteSpace: 'nowrap'
+            }}>
+                {label}
+            </div>
+        </div>
+    );
+};
+
 interface TrainerClientProps {
     initialHand: string;
     initialCards: [CardData, CardData];
@@ -240,23 +306,35 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         { id: 5, bottom: '0%', left: '42%', translate: '-50% 50%' },  // Bottom (HERO ANCHOR)
     ];
 
-    // Precise Dealer Button positioning rules for each seat
+    // Precise Dealer Button and Bet positioning rules (Seat Class Architecture)
     const getDealerButtonStyles = (seatId: number): React.CSSProperties => {
         switch (seatId) {
-            case 5: // Bottom Pole (Hero) - Moved further up-left to avoid overlapping enlarged cards
-                return { top: '-35px', left: '-25px' };
-            case 2: // Top Pole
-                return { bottom: '-40px', left: '50%', transform: 'translateX(-50%)' };
-            case 0: // Lower Left
-                return { top: '-20px', right: '-30px' };
-            case 1: // Upper Left
-                return { bottom: '-20px', right: '-30px' };
-            case 3: // Upper Right
-                return { bottom: '-20px', left: '-30px' };
-            case 4: // Lower Right
-                return { top: '-20px', left: '-30px' };
-            default:
-                return {};
+            case 5: return { top: '-45px', left: '-35px' }; // Baseline near bottom center
+            case 2: return { bottom: '-45px', left: '50%', transform: 'translateX(-50%)' };
+            case 0: return { top: '-15px', right: '-25px' };
+            case 1: return { bottom: '-15px', right: '-25px' };
+            case 3: return { bottom: '-15px', left: '-25px' };
+            case 4: return { top: '-15px', left: '-25px' };
+            default: return {};
+        }
+    };
+
+    const getBetStyles = (seatId: number): React.CSSProperties => {
+        // Implementing User's "PokerSeat" logic with 25px vertical bias
+        switch (seatId) {
+            case 5: // Hero: Top-Left reference + (-50px, -25px) to clear cards
+                return { top: '-45px', left: '-45px' };
+            case 2: // Top center: Mid-Bottom reference + (0, 45px)
+                return { bottom: '-45px', left: '50%', transform: 'translateX(-50%)' };
+            case 0: // Player 0 (Lower Left): Top-Right reference + (50px Right, 25px Higher)
+                return { top: '-25px', right: '-50px' };
+            case 1: // Player 1 (Upper Left): Bottom-Right reference + (50px Right, 25px Lower)
+                return { bottom: '-25px', right: '-50px' };
+            case 3: // Player 3 (Upper Right): Bottom-Left reference + (50px Left, 25px Lower)
+                return { bottom: '-25px', left: '-50px' };
+            case 4: // Player 4 (Lower Right): Top-Left reference + (50px Left, 25px Higher)
+                return { top: '-25px', left: '-50px' };
+            default: return {};
         }
     };
 
@@ -415,13 +493,54 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                             border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: '1000px'
                         }}></div>
+
+                        {/* Pot Area */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
+                            zIndex: 5
+                        }}>
+                            <ChipStack count={3} />
+                            <div style={{
+                                backgroundColor: 'rgba(0,0,0,0.4)',
+                                padding: '4px 12px',
+                                borderRadius: '100px',
+                                color: '#10b981',
+                                fontSize: '14px',
+                                fontWeight: '900',
+                                border: '1px solid rgba(16, 185, 129, 0.2)',
+                                backdropFilter: 'blur(4px)',
+                                letterSpacing: '1px'
+                            }}>
+                                POT: 1.5 BB
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Action Order for Fold States: UTG, HJ, CO, BTN, SB, BB */}
+                    {/* Position Indices: SB:0, BB:1, UTG:2, HJ:3, CO:4, BTN:5 */}
+                    {/* Action Order Indices: 2, 3, 4, 5, 0, 1 */}
 
                     {/* Seats */}
                     {seats.map((seat) => {
+                        const ACTION_ORDER = [2, 3, 4, 5, 0, 1];
                         const label = getPositionLabel(seat.id);
+                        const posIndex = POSITIONS.indexOf(label as Position);
                         const isHero = seat.id === 5;
                         const isDealer = label === 'BTN';
+                        const isSB = label === 'SB';
+                        const isBB = label === 'BB';
+
+                        // Fold Logic: Players between BB and Hero act before Hero
+                        const actionIndex = ACTION_ORDER.indexOf(posIndex);
+                        const heroActionIndex = ACTION_ORDER.indexOf(heroGamePosition);
+                        const isFolded = !isHero && actionIndex < heroActionIndex;
 
                         return (
                             <div
@@ -437,6 +556,20 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                                     transition: 'all 0.5s ease-in-out'
                                 }}
                             >
+                                {/* CHILD ANCHORED Bet Area */}
+                                {(isSB || isBB) && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        zIndex: 30,
+                                        ...getBetStyles(seat.id)
+                                    }}>
+                                        <BetArea
+                                            amount={isSB ? '0.5' : '1.0'}
+                                            label={isSB ? '0.5 BB' : '1.0 BB'}
+                                        />
+                                    </div>
+                                )}
+
                                 {/* Dealer Button */}
                                 {isDealer && (
                                     <div style={{
@@ -453,41 +586,43 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                                         fontWeight: '900',
                                         boxShadow: '0 4px 10px rgba(0,0,0,0.6)',
                                         border: '2px solid #10b981',
-                                        zIndex: 20,
+                                        zIndex: 40,
                                         ...getDealerButtonStyles(seat.id)
                                     }}>D</div>
                                 )}
 
-                                {isHero ? (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '-135px',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        display: 'flex',
-                                        gap: '0px',
-                                        zIndex: 15
-                                    }}>
-                                        <div style={{ transform: 'rotate(-5deg)' }}>
-                                            <Card {...heroCards[0]} width={85} height={125} />
+                                {!isFolded && (
+                                    isHero ? (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '-135px',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            display: 'flex',
+                                            gap: '0px',
+                                            zIndex: 15
+                                        }}>
+                                            <div style={{ transform: 'rotate(-5deg)' }}>
+                                                <Card {...heroCards[0]} width={85} height={125} />
+                                            </div>
+                                            <div style={{ transform: 'rotate(5deg)', marginLeft: '-25px' }}>
+                                                <Card {...heroCards[1]} width={85} height={125} />
+                                            </div>
                                         </div>
-                                        <div style={{ transform: 'rotate(5deg)', marginLeft: '-25px' }}>
-                                            <Card {...heroCards[1]} width={85} height={125} />
+                                    ) : (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '-55px',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            display: 'flex',
+                                            gap: '4px',
+                                            zIndex: 15
+                                        }}>
+                                            <div style={{ transform: 'rotate(-3deg)' }}><CardBack /></div>
+                                            <div style={{ transform: 'rotate(3deg)', marginLeft: '-15px' }}><CardBack /></div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '-55px',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        display: 'flex',
-                                        gap: '4px',
-                                        zIndex: 15
-                                    }}>
-                                        <div style={{ transform: 'rotate(-3deg)' }}><CardBack /></div>
-                                        <div style={{ transform: 'rotate(3deg)', marginLeft: '-15px' }}><CardBack /></div>
-                                    </div>
+                                    )
                                 )}
 
                                 {/* Seat UI */}
@@ -499,9 +634,11 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                                     minWidth: isHero ? '150px' : '100px',
                                     textAlign: 'center',
                                     boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
-                                    transition: 'all 0.2s',
+                                    transition: 'all 0.5s',
                                     animation: isHero ? 'pulse 2s infinite' : 'none',
-                                    width: 'fit-content'
+                                    width: 'fit-content',
+                                    opacity: isFolded ? 0.4 : 1,
+                                    filter: isFolded ? 'grayscale(0.5)' : 'none'
                                 }}>
                                     <div style={{ fontSize: '10px', color: isHero ? '#10b981' : '#94a3b8', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 'bold' }}>
                                         {label}
@@ -596,6 +733,11 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 @keyframes modalSlideUp {
                     from { transform: translateY(30px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(5px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
 
                 .action-btn:hover {
