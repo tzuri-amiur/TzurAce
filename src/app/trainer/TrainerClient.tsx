@@ -128,6 +128,12 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     const [currentHand, setCurrentHand] = useState<string>(initialHand);
     const [heroCards, setHeroCards] = useState<[CardData, CardData]>(initialCards);
 
+    // Initial Rank Logging
+    useEffect(() => {
+        const rank = getHandRank(initialHand);
+        console.log(`[Session Start] Hero dealt: ${initialHand} (Rank: ${rank}/169)`);
+    }, [initialHand]);
+
     // Sync position with settings if not RANDOM
     useEffect(() => {
         if (settings.heroPosition !== 'RANDOM') {
@@ -146,6 +152,10 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         const newHand = getRandomHand();
         setCurrentHand(newHand);
         setHeroCards(getCardsFromHand(newHand));
+
+        // Log rank for verification
+        const rank = getHandRank(newHand);
+        console.log(`[Action] New hand: ${newHand} (Rank: ${rank}/169)`);
     };
 
     // Static visual seats (Hero is always visual seat 5)

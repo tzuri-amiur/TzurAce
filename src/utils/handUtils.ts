@@ -1,4 +1,4 @@
-import { HAND_RANKINGS } from '../data/handRankings';
+import { HAND_NAMES } from '../data/handRankings';
 
 export type Suit = 'hearts' | 'diamonds' | 'clubs' | 'spades';
 export interface CardData {
@@ -12,8 +12,8 @@ const SUITS: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
  * Returns a random hand notation from the 169 possible starting hands.
  */
 export function getRandomHand(): string {
-    const randomIndex = Math.floor(Math.random() * HAND_RANKINGS.length);
-    return HAND_RANKINGS[randomIndex].hand;
+    const randomIndex = Math.floor(Math.random() * HAND_NAMES.length);
+    return HAND_NAMES[randomIndex];
 }
 
 /**

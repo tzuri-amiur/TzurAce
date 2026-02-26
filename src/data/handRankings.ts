@@ -1,50 +1,29 @@
-export interface HandRanking {
-    hand: string;
-    rank: number;
-}
+export const HAND_RANKINGS: Record<string, number> = {
+    // Top 60 (User Specified GTO Ranking)
+    "AA": 1, "KK": 2, "QQ": 3, "AKs": 4, "JJ": 5, "TT": 6, "AQs": 7, "AJs": 8, "AKo": 9, "KQs": 10,
+    "99": 11, "ATs": 12, "AQo": 13, "KJs": 14, "88": 15, "QJs": 16, "KTs": 17, "A5s": 18, "AJo": 19, "QTs": 20,
+    "JTs": 21, "77": 22, "A4s": 23, "A9s": 24, "A3s": 25, "A8s": 26, "A2s": 27, "K9s": 28, "66": 29, "T9s": 30,
+    "A7s": 31, "A6s": 32, "KQo": 33, "Q9s": 34, "J9s": 35, "55": 36, "98s": 37, "87s": 38, "44": 39, "K8s": 40,
+    "Q8s": 41, "J8s": 42, "T8s": 43, "33": 44, "22": 45, "ATo": 46, "76s": 47, "65s": 48, "97s": 49, "K7s": 50,
+    "Q7s": 51, "J7s": 52, "T7s": 53, "54s": 54, "86s": 55, "K6s": 56, "A9o": 57, "K5s": 58, "Q6s": 59, "J6s": 60,
 
-export const HAND_RANKINGS: HandRanking[] = [
-    { hand: "AA", rank: 1 }, { hand: "KK", rank: 2 }, { hand: "QQ", rank: 3 }, { hand: "AKs", rank: 4 },
-    { hand: "JJ", rank: 5 }, { hand: "AQs", rank: 6 }, { hand: "KQs", rank: 7 }, { hand: "AJs", rank: 8 },
-    { hand: "KJs", rank: 9 }, { hand: "TT", rank: 10 }, { hand: "AKo", rank: 11 }, { hand: "ATs", rank: 12 },
-    { hand: "QTs", rank: 13 }, { hand: "KTs", rank: 14 }, { hand: "QJs", rank: 15 }, { hand: "99", rank: 16 },
-    { hand: "AQo", rank: 17 }, { hand: "A9s", rank: 18 }, { hand: "KQo", rank: 19 }, { hand: "88", rank: 20 },
-    { hand: "A8s", rank: 21 }, { hand: "A5s", rank: 22 }, { hand: "A7s", rank: 23 }, { hand: "A4s", rank: 24 },
-    { hand: "AJs", rank: 25 }, { hand: "JTs", rank: 26 }, { hand: "A3s", rank: 27 }, { hand: "A6s", rank: 28 },
-    { hand: "A2s", rank: 29 }, { hand: "K9s", rank: 30 }, { hand: "Q9s", rank: 31 }, { hand: "77", rank: 32 },
-    { hand: "J9s", rank: 33 }, { hand: "T9s", rank: 34 }, { hand: "KJo", rank: 35 }, { hand: "QJo", rank: 36 },
-    { hand: "66", rank: 37 }, { hand: "ATo", rank: 38 }, { hand: "K8s", rank: 39 }, { hand: "Q8s", rank: 40 },
-    { hand: "K7s", rank: 41 }, { hand: "K6s", rank: 42 }, { hand: "K5s", rank: 43 }, { hand: "J8s", rank: 44 },
-    { hand: "T8s", rank: 45 }, { hand: "55", rank: 46 }, { hand: "K4s", rank: 47 }, { hand: "K3s", rank: 48 },
-    { hand: "K2s", rank: 49 }, { hand: "Q7s", rank: 50 }, { hand: "98s", rank: 51 }, { hand: "Q6s", rank: 52 },
-    { hand: "Q5s", rank: 53 }, { hand: "44", rank: 54 }, { hand: "Q4s", rank: 55 }, { hand: "Q3s", rank: 56 },
-    { hand: "Q2s", rank: 57 }, { hand: "J7s", rank: 58 }, { hand: "T7s", rank: 59 }, { hand: "J6s", rank: 60 },
-    { hand: "97s", rank: 61 }, { hand: "J5s", rank: 62 }, { hand: "87s", rank: 63 }, { hand: "33", rank: 64 },
-    { hand: "J4s", rank: 65 }, { hand: "J3s", rank: 66 }, { hand: "J2s", rank: 67 }, { hand: "T6s", rank: 68 },
-    { hand: "96s", rank: 69 }, { hand: "86s", rank: 70 }, { hand: "76s", rank: 71 }, { hand: "22", rank: 72 },
-    { hand: "KTo", rank: 73 }, { hand: "QTo", rank: 74 }, { hand: "JTo", rank: 75 }, { hand: "A9o", rank: 76 },
-    { hand: "T5s", rank: 77 }, { hand: "95s", rank: 78 }, { hand: "85s", rank: 79 }, { hand: "75s", rank: 80 },
-    { hand: "65s", rank: 81 }, { hand: "T4s", rank: 82 }, { hand: "T3s", rank: 83 }, { hand: "T2s", rank: 84 },
-    { hand: "94s", rank: 85 }, { hand: "84s", rank: 86 }, { hand: "74s", rank: 87 }, { hand: "64s", rank: 88 },
-    { hand: "54s", rank: 89 }, { hand: "93s", rank: 90 }, { hand: "92s", rank: 91 }, { hand: "83s", rank: 92 },
-    { hand: "82s", rank: 93 }, { hand: "73s", rank: 94 }, { hand: "72s", rank: 95 }, { hand: "63s", rank: 96 },
-    { hand: "62s", rank: 97 }, { hand: "53s", rank: 98 }, { hand: "52s", rank: 99 }, { hand: "43s", rank: 100 },
-    { hand: "42s", rank: 101 }, { hand: "32s", rank: 102 }, { hand: "A8o", rank: 103 }, { hand: "A7o", rank: 104 },
-    { hand: "A6o", rank: 105 }, { hand: "A5o", rank: 106 }, { hand: "A4o", rank: 107 }, { hand: "A3o", rank: 108 },
-    { hand: "A2o", rank: 109 }, { hand: "K9o", rank: 110 }, { hand: "Q9o", rank: 111 }, { hand: "J9o", rank: 112 },
-    { hand: "T9o", rank: 113 }, { hand: "K8o", rank: 114 }, { hand: "Q8o", rank: 115 }, { hand: "J8o", rank: 116 },
-    { hand: "T8o", rank: 117 }, { hand: "98o", rank: 118 }, { hand: "K7o", rank: 119 }, { hand: "Q7o", rank: 120 },
-    { hand: "J7o", rank: 121 }, { hand: "T7o", rank: 122 }, { hand: "97o", rank: 123 }, { hand: "87o", rank: 124 },
-    { hand: "K6o", rank: 125 }, { hand: "Q6o", rank: 126 }, { hand: "J6o", rank: 127 }, { hand: "T6o", rank: 128 },
-    { hand: "96o", rank: 129 }, { hand: "86o", rank: 130 }, { hand: "76o", rank: 131 }, { hand: "K5o", rank: 132 },
-    { hand: "Q5o", rank: 133 }, { hand: "J5o", rank: 134 }, { hand: "T5o", rank: 135 }, { hand: "95o", rank: 136 },
-    { hand: "85o", rank: 137 }, { hand: "75o", rank: 138 }, { hand: "65o", rank: 139 }, { hand: "K4o", rank: 140 },
-    { hand: "Q4o", rank: 141 }, { hand: "J4o", rank: 142 }, { hand: "T4o", rank: 143 }, { hand: "94o", rank: 144 },
-    { hand: "84o", rank: 145 }, { hand: "74o", rank: 146 }, { hand: "64o", rank: 147 }, { hand: "54o", rank: 148 },
-    { hand: "K3o", rank: 149 }, { hand: "Q3o", rank: 150 }, { hand: "J3o", rank: 151 }, { hand: "T3o", rank: 152 },
-    { hand: "93o", rank: 153 }, { hand: "83o", rank: 154 }, { hand: "73o", rank: 155 }, { hand: "63o", rank: 156 },
-    { hand: "53o", rank: 157 }, { hand: "43o", rank: 158 }, { hand: "K2o", rank: 149 }, { hand: "Q2o", rank: 160 },
-    { hand: "J2o", rank: 161 }, { hand: "T2o", rank: 162 }, { hand: "92o", rank: 163 }, { hand: "82o", rank: 164 },
-    { hand: "72o", rank: 165 }, { hand: "62o", rank: 166 }, { hand: "52o", rank: 167 }, { hand: "42o", rank: 168 },
-    { hand: "32o", rank: 169 }
-];
+    // 61-100: Remaining Suited Hands & Best Semi-Broadways
+    "Q5s": 61, "J5s": 62, "T6s": 63, "96s": 64, "85s": 65, "75s": 66, "64s": 67, "53s": 68, "43s": 69, "K4s": 70,
+    "Q4s": 71, "J4s": 72, "K3s": 73, "Q3s": 74, "J3s": 75, "K2s": 76, "Q2s": 77, "J2s": 78, "A8o": 79, "KJo": 80,
+    "QJo": 81, "JTo": 82, "A7o": 83, "A5o": 84, "84s": 85, "74s": 86, "63s": 87, "52s": 88, "42s": 89, "A4o": 90,
+    "A3o": 91, "A2o": 92, "KTo": 93, "QTo": 94, "A6o": 95, "95s": 96, "T5s": 97, "T4s": 98, "T3s": 99, "T2s": 100,
+
+    // 101-135: Mid-Tier Offsuit & Weak Suited
+    "K9o": 101, "Q9o": 102, "J9o": 103, "T9o": 104, "94s": 105, "93s": 106, "92s": 107, "83s": 108, "82s": 109, "73s": 110,
+    "72s": 111, "62s": 112, "32s": 113, "K8o": 114, "Q8o": 115, "J8o": 116, "T8o": 117, "98o": 118, "87o": 119, "76o": 120,
+    "65o": 121, "54o": 122, "K7o": 123, "K6o": 124, "K5o": 125, "K4o": 126, "K3o": 127, "K2o": 128, "Q7o": 129, "Q6o": 130,
+    "Q5o": 131, "Q4o": 132, "Q3o": 133, "Q2o": 134, "J7o": 135,
+
+    // 136-169: Bottom Tier Junk (Mostly Offsuit)
+    "J6o": 136, "J5o": 137, "J4o": 138, "J3o": 139, "J2o": 140, "T7o": 141, "T6o": 142, "T5o": 143, "T4o": 144, "T3o": 145, "T2o": 146,
+    "97o": 147, "96o": 148, "95o": 149, "94o": 150, "93o": 151, "92o": 152, "86o": 153, "85o": 154, "84o": 155, "83o": 156, "82o": 157,
+    "75o": 158, "74o": 159, "73o": 160, "72o": 169, // 72o is explicitly 169 per instructions
+    "64o": 161, "63o": 162, "62o": 163, "53o": 164, "52o": 165, "43o": 166, "42o": 167, "32o": 168
+};
+
+export const HAND_NAMES = Object.keys(HAND_RANKINGS);
