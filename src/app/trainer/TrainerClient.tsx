@@ -12,53 +12,27 @@ type Position = 'SB' | 'BB' | 'UTG' | 'HJ' | 'CO' | 'BTN';
 // Standard Poker positions in clockwise order
 const POSITIONS: Position[] = ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'];
 
-const Card = ({ rank, suit, width = 45, height = 65 }: CardData & { width?: number, height?: number }) => {
+const Card = ({ rank, suit, width = 45, height = 65, className }: CardData & { width?: number, height?: number, className?: string }) => {
     const isRed = suit === 'hearts' || suit === 'diamonds';
     const suitIcons: Record<string, string> = {
-        hearts: '♥',
-        diamonds: '♦',
-        clubs: '♣',
-        spades: '♠'
+        hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠'
     };
 
+    const isLarge = width > 50;
+
     return (
-        <div style={{
-            width: `${width}px`,
-            height: `${height}px`,
-            backgroundColor: 'white',
-            borderRadius: '6px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: width > 50 ? '8px' : '4px',
-            boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
-            position: 'relative',
-            userSelect: 'none',
-            border: '1px solid rgba(0,0,0,0.1)'
+        <div className={`bg-white rounded-md flex flex-col justify-between shadow-2xl relative select-none border border-black/10 transition-all ${className}`} style={{
+            width: width ? `${width}px` : '100%',
+            height: height ? `${height}px` : '100%',
+            padding: isLarge ? '8px' : '4px',
         }}>
-            <div style={{
-                fontSize: width > 50 ? '20px' : '14px',
-                fontWeight: '900',
-                color: isRed ? '#ef4444' : '#111827',
-                lineHeight: '1'
-            }}>
+            <div style={{ fontSize: isLarge ? '20px' : '14px', fontWeight: '900', color: isRed ? '#ef4444' : '#111827', lineHeight: '1' }}>
                 {rank}
             </div>
-            <div style={{
-                fontSize: width > 50 ? '32px' : '20px',
-                alignSelf: 'center',
-                color: isRed ? '#ef4444' : '#111827',
-                marginBottom: '4px'
-            }}>
+            <div style={{ fontSize: isLarge ? '32px' : '20px', alignSelf: 'center', color: isRed ? '#ef4444' : '#111827', marginBottom: '4px' }}>
                 {suitIcons[suit]}
             </div>
-            <div style={{
-                fontSize: width > 50 ? '20px' : '14px',
-                fontWeight: '900',
-                color: isRed ? '#ef4444' : '#111827',
-                transform: 'rotate(180deg)',
-                lineHeight: '1'
-            }}>
+            <div style={{ fontSize: isLarge ? '20px' : '14px', fontWeight: '900', color: isRed ? '#ef4444' : '#111827', transform: 'rotate(180deg)', lineHeight: '1' }}>
                 {rank}
             </div>
         </div>
@@ -183,6 +157,8 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     const router = useRouter();
     const { settings } = useTrainerSettings();
     const [mounted, setMounted] = useState(false);
+    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+    const isPortrait = windowSize.height > windowSize.width;
     const [showHint, setShowHint] = useState(false);
     const [modalData, setModalData] = useState<{
         type: 'ERROR' | 'HINT';
@@ -191,6 +167,12 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
 
     useEffect(() => {
         setMounted(true);
+        const handleResize = () => {
+            setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     // heroGamePosition tracking (index in POSITIONS array)
@@ -297,17 +279,68 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         return POSITIONS[positionIndex];
     };
 
-    const seats = [
-        { id: 0, bottom: '12%', left: '5%', translate: '0 0' },     // Lower Left
-        { id: 1, top: '12%', left: '5%', translate: '0 0' },        // Upper Left
-        { id: 2, top: '2%', left: '42%', translate: '-50% 0' },     // Top
-        { id: 3, top: '12%', right: '5%', translate: '0 0' },       // Upper Right
-        { id: 4, bottom: '12%', right: '5%', translate: '0 0' },    // Lower Right
-        { id: 5, bottom: '0%', left: '42%', translate: '-50% 50%' },  // Bottom (HERO ANCHOR)
+    const LANDSCAPE_SEATS = [
+        { id: 0, bottom: '12%', left: '5%' },
+        { id: 1, top: '12%', left: '5%' },
+        { id: 2, top: '2%', left: '42%', translate: '-50%, 0' },
+        { id: 3, top: '12%', right: '5%' },
+        { id: 4, bottom: '12%', right: '5%' },
+        { id: 5, bottom: '0%', left: '42%', translate: '-50%, 50%' },
     ];
+
+    // Portrait: vertical ellipse — hero at bottom, Player 2 at top, Players 0&1 left, Players 3&4 right
+    const PORTRAIT_SEATS = [
+        { id: 0, bottom: '28%', left: '4%' },
+        { id: 1, top: '25%', left: '4%' },
+        { id: 2, top: '1%', left: '50%', translate: '-50%, 0' },
+        { id: 3, top: '25%', right: '4%' },
+        { id: 4, bottom: '28%', right: '4%' },
+        { id: 5, bottom: '-17%', left: '50%', translate: '-50%, 0' },
+    ];
+
+    const seats = isPortrait ? PORTRAIT_SEATS : LANDSCAPE_SEATS;
+
+    // --- Mobile Scaling ---
+    // On mobile, compute explicit table dimensions and scale seats proportionally.
+    // On desktop (width >= 1024), CSS handles layout via maxWidth + aspectRatio.
+    const isMobile = windowSize.width > 0 && windowSize.width < 1024;
+    let tableW = 0, tableH = 0;
+    if (isMobile) {
+        if (isPortrait) {
+            // Portrait: width-constrained, height capped by viewport
+            tableW = windowSize.width - 16;
+            tableH = Math.min(tableW * (1.2), windowSize.height - 200);
+        } else {
+            // Landscape: height-constrained (action bar + title takes ~150px)
+            const availH = windowSize.height - 150;
+            tableH = Math.min(availH, 380);
+            tableW = Math.min(tableH * (16 / 9), windowSize.width - 40);
+        }
+    } else {
+        // Desktop: dynamic but max 950x420, leaving space for header and buttons
+        const availH = windowSize.height - 250;
+        tableH = Math.min(availH, 420);
+        tableW = tableH * (950 / 420);
+    }
+    // Scale seats relative to their natural desktop positioning
+    const seatScale = !isMobile ? 1.0
+        : isPortrait
+            ? Math.min(1.0, tableW / 420)
+            : Math.min(1.0, tableW / 950);
 
     // Precise Dealer Button and Bet positioning rules (Seat Class Architecture)
     const getDealerButtonStyles = (seatId: number): React.CSSProperties => {
+        if (isPortrait) {
+            switch (seatId) {
+                case 5: return { top: '-58px', left: 'calc(50% - 110px)', transform: 'translateX(-50%)' };
+                case 2: return { bottom: '-35px', left: '50%', transform: 'translateX(-50%)' };
+                case 0: return { bottom: '15px', right: '-40px' };
+                case 1: return { bottom: '15px', right: '-40px' };
+                case 3: return { bottom: '15px', left: '-40px' };
+                case 4: return { bottom: '15px', left: '-40px' };
+                default: return {};
+            }
+        }
         switch (seatId) {
             case 5: return { top: '-45px', left: '-35px' }; // Baseline near bottom center
             case 2: return { bottom: '-45px', left: '50%', transform: 'translateX(-50%)' };
@@ -320,6 +353,17 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     };
 
     const getBetStyles = (seatId: number): React.CSSProperties => {
+        if (isPortrait) {
+            switch (seatId) {
+                case 5: return { top: '-85px', left: '50%', transform: 'translateX(-50%)' };
+                case 2: return { bottom: '-85px', left: '50%', transform: 'translateX(-50%)' };
+                case 0: return { top: '50%', left: 'unset', right: '-70px', transform: 'translateY(-50%)' };
+                case 1: return { top: '50%', left: 'unset', right: '-70px', transform: 'translateY(-50%)' };
+                case 3: return { top: '50%', left: '-70px', transform: 'translateY(-50%)' };
+                case 4: return { top: '50%', left: '-70px', transform: 'translateY(-50%)' };
+                default: return {};
+            }
+        }
         // Implementing User's "PokerSeat" logic with 25px vertical bias
         switch (seatId) {
             case 5: // Hero: Top-Left reference + (-50px, -25px) to clear cards
@@ -361,8 +405,9 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
             fontFamily: 'Inter, system-ui, sans-serif',
             display: 'flex',
             flexDirection: 'column',
-            padding: '20px',
-            overflow: 'hidden'
+            padding: isMobile ? '0' : '10px',
+            overflow: 'hidden',
+            height: '100dvh'
         }}>
             {/* Feedback Modal Overlay */}
             {showHint && (
@@ -437,7 +482,7 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
             )}
 
             {/* Page Title */}
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '0' }}>
                 <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px', letterSpacing: '2px' }}>
                     TRAINING LAB <span style={{ color: 'white' }}>| {settings.scenario === 'RFI' ? 'RFI' : 'RESPONSE'}</span>
                 </div>
@@ -449,39 +494,52 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '0 0 100px 0',
-                marginTop: '-40px'
+                padding: isMobile && isPortrait ? '2px 0' : '0',
+                position: 'relative',
+                // On desktop: cap height so action buttons are always visible below.
+                maxHeight: !isMobile ? 'calc(100vh - 180px)' : 'none',
             }}>
                 <div style={{
                     position: 'relative',
-                    width: '100%',
-                    maxWidth: '1000px',
-                    aspectRatio: '16/9',
+                    // On mobile use explicit pixel dimensions (computed from viewport).
+                    // On desktop fall back to CSS fluid sizing via maxWidth + aspectRatio.
+                    ...(tableW > 0
+                        ? { width: `${tableW}px`, height: `${tableH}px` }
+                        : {
+                            width: '100%',
+                            maxWidth: isPortrait ? '450px' : '1000px',
+                            aspectRatio: isPortrait ? '9/16' : '16/9',
+                        }
+                    ),
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    transition: 'all 0.5s ease'
                 }}>
                     {/* The Poker Table */}
                     <div style={{
-                        width: '85%',
-                        height: '75%',
+                        width: isPortrait ? '92%' : '85%',
+                        height: isPortrait ? '98%' : '75%',
                         backgroundColor: '#065f46',
-                        borderRadius: '1000px',
+                        borderRadius: isPortrait ? '500px' : '1000px',
                         border: '12px solid #111827',
                         boxShadow: '0 0 60px rgba(0,0,0,0.8), inset 0 0 120px rgba(0,0,0,0.6)',
                         position: 'relative',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        transition: 'all 0.5s ease'
                     }}>
                         {/* Watermark */}
                         <div style={{
-                            fontSize: '48px',
+                            fontSize: isPortrait ? '32px' : '48px',
                             fontWeight: '900',
                             color: 'rgba(255,255,255,0.03)',
                             userSelect: 'none',
-                            letterSpacing: '10px'
+                            letterSpacing: isPortrait ? '5px' : '10px',
+                            transform: isPortrait ? 'rotate(90deg)' : 'none',
+                            whiteSpace: 'nowrap'
                         }}>
                             TZURACE
                         </div>
@@ -494,10 +552,9 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                             borderRadius: '1000px'
                         }}></div>
 
-                        {/* Pot Area */}
                         <div style={{
                             position: 'absolute',
-                            top: '50%',
+                            top: isPortrait ? '45%' : '50%',
                             left: '50%',
                             transform: 'translate(-50%, -50%)',
                             display: 'flex',
@@ -543,123 +600,135 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                         const isFolded = !isHero && actionIndex < heroActionIndex;
 
                         return (
+                            // TWO-LAYER WRAPPER:
+                            // Outer div: handles absolute positioning + centering translate ONLY.
+                            //   (no scale here — otherwise translate(-50%) is distorted by scale)
+                            // Inner div: handles scale ONLY.
+                            //   (no translate here — so scale pivot is always the element's own center)
                             <div
                                 key={seat.id}
+                                className="absolute transition-all duration-500"
                                 style={{
-                                    position: 'absolute',
                                     top: seat.top,
                                     left: seat.left,
                                     right: seat.right,
                                     bottom: seat.bottom,
                                     transform: seat.translate ? `translate(${seat.translate})` : 'none',
                                     zIndex: 10,
-                                    transition: 'all 0.5s ease-in-out'
                                 }}
                             >
-                                {/* CHILD ANCHORED Bet Area */}
-                                {(isSB || isBB) && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        zIndex: 30,
-                                        ...getBetStyles(seat.id)
-                                    }}>
-                                        <BetArea
-                                            amount={isSB ? '0.5' : '1.0'}
-                                            label={isSB ? '0.5 BB' : '1.0 BB'}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Dealer Button */}
-                                {isDealer && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        width: '32px',
-                                        height: '32px',
-                                        backgroundColor: 'white',
-                                        color: 'black',
-                                        borderRadius: '50%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '14px',
-                                        fontWeight: '900',
-                                        boxShadow: '0 4px 10px rgba(0,0,0,0.6)',
-                                        border: '2px solid #10b981',
-                                        zIndex: 40,
-                                        ...getDealerButtonStyles(seat.id)
-                                    }}>D</div>
-                                )}
-
-                                {!isFolded && (
-                                    isHero ? (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '-135px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            display: 'flex',
-                                            gap: '0px',
-                                            zIndex: 15
-                                        }}>
-                                            <div style={{ transform: 'rotate(-5deg)' }}>
-                                                <Card {...heroCards[0]} width={85} height={125} />
-                                            </div>
-                                            <div style={{ transform: 'rotate(5deg)', marginLeft: '-25px' }}>
-                                                <Card {...heroCards[1]} width={85} height={125} />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '-55px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            display: 'flex',
-                                            gap: '4px',
-                                            zIndex: 15
-                                        }}>
-                                            <div style={{ transform: 'rotate(-3deg)' }}><CardBack /></div>
-                                            <div style={{ transform: 'rotate(3deg)', marginLeft: '-15px' }}><CardBack /></div>
-                                        </div>
-                                    )
-                                )}
-
-                                {/* Seat UI */}
+                                {/* Scale wrapper — applies seatScale around its own center */}
                                 <div style={{
-                                    backgroundColor: isHero ? '#0f172a' : '#1e293b',
-                                    border: isHero ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-                                    padding: '12px 24px',
-                                    borderRadius: '12px',
-                                    minWidth: isHero ? '150px' : '100px',
-                                    textAlign: 'center',
-                                    boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
-                                    transition: 'all 0.5s',
-                                    animation: isHero ? 'pulse 2s infinite' : 'none',
-                                    width: 'fit-content',
-                                    opacity: isFolded ? 0.4 : 1,
-                                    filter: isFolded ? 'grayscale(0.5)' : 'none'
+                                    transform: seatScale !== 1.0 ? `scale(${seatScale.toFixed(3)})` : 'none',
+                                    transformOrigin: 'center center',
+                                    position: 'relative',
                                 }}>
-                                    <div style={{ fontSize: '10px', color: isHero ? '#10b981' : '#94a3b8', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 'bold' }}>
-                                        {label}
-                                    </div>
-                                    <div style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>
-                                        {isHero ? 'HERO' : `Player ${seat.id}`}
-                                    </div>
-                                    {isHero && (
+                                    {/* CHILD ANCHORED Bet Area */}
+                                    {(isSB || isBB) && (
                                         <div style={{
-                                            marginTop: '8px',
-                                            fontSize: '11px',
-                                            color: '#10b981',
-                                            borderTop: '1px solid rgba(255,255,255,0.05)',
-                                            paddingTop: '8px',
-                                            fontWeight: 'bold'
+                                            position: 'absolute',
+                                            zIndex: 30,
+                                            ...getBetStyles(seat.id)
                                         }}>
-                                            Hand: <span style={{ color: 'white' }}>
-                                                {currentHand} {mounted && settings.showHandRank ? `(${getHandRank(currentHand)}/169)` : ''}
-                                            </span>
+                                            <BetArea
+                                                amount={isSB ? '0.5' : '1.0'}
+                                                label={isSB ? '0.5 BB' : '1.0 BB'}
+                                            />
                                         </div>
                                     )}
+
+                                    {/* Dealer Button */}
+                                    {isDealer && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            width: '32px',
+                                            height: '32px',
+                                            backgroundColor: 'white',
+                                            color: 'black',
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '14px',
+                                            fontWeight: '900',
+                                            boxShadow: '0 4px 10px rgba(0,0,0,0.6)',
+                                            border: '2px solid #10b981',
+                                            zIndex: 40,
+                                            ...getDealerButtonStyles(seat.id)
+                                        }}>D</div>
+                                    )}
+
+                                    {!isFolded && (
+                                        isHero ? (
+                                            <div
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-108px',
+                                                    left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    display: 'flex',
+                                                    gap: '0',
+                                                    zIndex: 15
+                                                }}
+                                            >
+                                                <div style={{ transform: 'rotate(-3deg)' }}>
+                                                    <Card {...heroCards[0]} width={85} height={120} />
+                                                </div>
+                                                <div style={{ transform: 'rotate(3deg)', marginLeft: '-20px' }}>
+                                                    <Card {...heroCards[1]} width={85} height={120} />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '-55px',
+                                                left: '50%',
+                                                transform: 'translateX(-50%)',
+                                                display: 'flex',
+                                                gap: '4px',
+                                                zIndex: 15
+                                            }}>
+                                                <div style={{ transform: 'rotate(-3deg)' }}><CardBack /></div>
+                                                <div style={{ transform: 'rotate(3deg)', marginLeft: '-15px' }}><CardBack /></div>
+                                            </div>
+                                        )
+                                    )}
+
+                                    {/* Seat UI */}
+                                    <div style={{
+                                        backgroundColor: isHero ? '#0f172a' : '#1e293b',
+                                        border: isHero ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                                        minWidth: isHero ? '150px' : '100px',
+                                        width: isHero ? '150px' : 'fit-content',
+                                        padding: isHero ? '12px 0' : '12px 24px',
+                                        textAlign: 'center',
+                                        boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
+                                        transition: 'all 0.5s',
+                                        animation: isHero ? 'pulse 2s infinite' : 'none',
+                                        opacity: isFolded ? 0.4 : 1,
+                                        filter: isFolded ? 'grayscale(0.5)' : 'none'
+                                    }}>
+                                        <div style={{ fontSize: '10px', color: isHero ? '#10b981' : '#94a3b8', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 'bold' }}>
+                                            {label}
+                                        </div>
+                                        <div style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>
+                                            {isHero ? 'HERO' : `Player ${seat.id}`}
+                                        </div>
+                                        {isHero && (
+                                            <div style={{
+                                                marginTop: '8px',
+                                                fontSize: '11px',
+                                                color: '#10b981',
+                                                borderTop: '1px solid rgba(255,255,255,0.05)',
+                                                paddingTop: '8px',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                Hand: <span style={{ color: 'white' }}>
+                                                    {currentHand} {mounted && settings.showHandRank ? `(${getHandRank(currentHand)}/169)` : ''}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -668,58 +737,37 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
             </div>
 
             {/* Action Buttons Bar */}
-            <div style={{
-                position: 'fixed',
-                bottom: '60px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '20px',
-                zIndex: 50
-            }}>
+            <div className={`bottom-3 left-0 right-0 bg-slate-950/90 backdrop-blur-xl border-t border-white/10 grid grid-cols-2 gap-2 z-50 md:relative md:bottom-auto md:left-auto md:right-auto md:bg-transparent md:border-none md:p-0 md:flex md:flex-row md:items-center md:justify-center md:gap-5 transition-all ${isMobile ? 'relative p-1 pb-2' : 'p-2'}`}>
                 <button
                     onClick={() => handleAction('FOLD')}
-                    style={{ ...buttonStyle, backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171' }}
-                    className="action-btn"
+                    style={{ ...buttonStyle }}
+                    className="action-btn bg-red-500/10 border border-red-500/50 text-red-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
                 >
                     FOLD
                 </button>
                 <button
                     onClick={() => handleAction('CALL')}
-                    style={{ ...buttonStyle, backgroundColor: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6', color: '#60a5fa' }}
-                    className="action-btn"
+                    style={{ ...buttonStyle }}
+                    className="action-btn bg-blue-500/10 border border-blue-500/50 text-blue-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
                 >
                     CALL
                 </button>
                 <button
                     onClick={() => handleAction('RAISE')}
-                    style={{ ...buttonStyle, backgroundColor: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', color: '#34d399' }}
-                    className="action-btn"
+                    style={{ ...buttonStyle }}
+                    className="action-btn bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
                 >
                     RAISE
                 </button>
 
-                {/* Hint Button */}
                 <button
                     onClick={toggleHint}
-                    style={{
-                        ...buttonStyle,
-                        minWidth: '60px',
-                        padding: '12px',
-                        backgroundColor: showHint ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                        border: showHint ? '1px solid #fbbf24' : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: showHint ? '#fbbf24' : '#94a3b8',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                    }}
-                    className="action-btn"
+                    style={{ ...buttonStyle, minWidth: 'unset' }}
+                    className={`action-btn flex items-center justify-center gap-2 py-2 px-4 text-sm md:py-3 md:px-4 ${showHint ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-white/5 border-white/10 text-slate-400'}`}
                     title="Toggle Range Hint"
                 >
-                    <span style={{ fontSize: '20px' }}>💡</span>
-                    <span style={{ fontSize: '12px' }}>{showHint ? 'HIDE' : 'HINT'}</span>
+                    <span className="text-lg md:text-xl">💡</span>
+                    <span className="text-xs md:text-sm font-black">{showHint ? 'HIDE' : 'HINT'}</span>
                 </button>
             </div>
 
