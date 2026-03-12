@@ -2,14 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './Simulator.css';
 
-// ─── Types ───────────────────────────────────────────────────
-type Suit = 'hearts' | 'diamonds' | 'clubs' | 'spades';
-type Rank = 'A' | 'K' | 'Q' | 'J' | 'T' | '9' | '8' | '7' | '6' | '5' | '4' | '3' | '2';
-
-interface CardData {
-    rank: Rank;
-    suit: Suit;
-}
+import { CardData, Suit } from '@/utils/handUtils';
 
 // ─── Card Component ───────────────────────────────────────────
 const SUIT_ICONS: Record<Suit, string> = {
@@ -54,8 +47,16 @@ const POSITION_NAMES = ['SB', 'BB', 'UTG', 'UTG+1', 'LJ', 'HJ', 'CO', 'BTN', 'P9
 function getPositions(count: number): string[] {
     // Always: first=SB, second=BB, last=BTN
     const middleSlots = count - 3; // positions between BB and BTN
+    if (middleSlots < 0) return ['SB', 'BB'].slice(0, count);
     const middleLabels = ['UTG', 'UTG+1', 'LJ', 'HJ', 'CO'].slice(5 - middleSlots - 1, 4);
     return ['SB', 'BB', ...middleLabels, 'BTN'];
+}
+
+function getShiftedPositions(count: number, heroPos: string): string[] {
+    const base = getPositions(count);
+    const heroIdx = base.indexOf(heroPos);
+    if (heroIdx === -1) return base;
+    return [...base.slice(heroIdx), ...base.slice(0, heroIdx)];
 }
 
 function getEvenlySpacedEllipseAngles(numPoints: number, rx: number, ry: number, startAngleDeg: number): number[] {
@@ -100,15 +101,35 @@ function getEvenlySpacedEllipseAngles(numPoints: number, rx: number, ry: number,
 }
 
 // ─── Main Simulator Component ─────────────────────────────────
-export default function Simulator() {
+export interface SimulatorProps {
+    heroCards?: [CardData, CardData];
+    boardCards?: CardData[];
+    potSizeBB?: number;
+    numPlayers?: number;
+    heroPosition?: string;
+    onAction?: (action: 'FOLD' | 'CALL' | 'RAISE', amount?: number) => void;
+    onHint?: () => void;
+}
+
+export default function Simulator({
+    heroCards: propHeroCards,
+    boardCards: propBoardCards,
+    potSizeBB = 6.0,
+    numPlayers: propNumPlayers,
+    heroPosition = 'SB',
+    onAction,
+    onHint
+}: SimulatorProps) {
     // Default initial state: A full board and initial blinds
-    const [numPlayers, setNumPlayers] = useState(6);
+    const [localNumPlayers, setLocalNumPlayers] = useState(6);
+    const numPlayers = propNumPlayers ?? localNumPlayers;
+
     const [raiseAmount, setRaiseAmount] = useState(3);
     const [isPortrait, setIsPortrait] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     // Initial board cards (Flop: Kd Qs Jc, Turn: Th, River: 9d)
-    const initialBoard: CardData[] = [
+    const boardCards = propBoardCards || [
         { rank: 'K', suit: 'diamonds' },
         { rank: 'Q', suit: 'spades' },
         { rank: 'J', suit: 'clubs' },
@@ -117,7 +138,7 @@ export default function Simulator() {
     ];
 
     // Hero cards: As Ah (fixed as default)
-    const heroCards: [CardData, CardData] = [
+    const heroCards = propHeroCards || [
         { rank: 'A', suit: 'spades' },
         { rank: 'A', suit: 'hearts' },
     ];
@@ -142,12 +163,14 @@ export default function Simulator() {
     }, []);
 
     const tableSeats = useMemo(() => {
+        const shiftedPositions = getShiftedPositions(numPlayers, heroPosition);
+
         const rawSeats = Array.from({ length: numPlayers }).map((_, i) => ({
             seatIndex: i,
             isHero: i === 0,
             isFolded: false,
-            isDealer: i === 1,
-            positionLabel: getPositions(numPlayers)[i],
+            isDealer: shiftedPositions[i] === 'BTN',
+            positionLabel: shiftedPositions[i],
         }));
 
         // Use approximate logical aspect ratios to calculate perfectly even arc lengths
@@ -210,9 +233,12 @@ export default function Simulator() {
     }, [numPlayers, isPortrait]);
 
     const handleAction = useCallback((action: 'FOLD' | 'CALL' | 'RAISE') => {
-        console.log(`[Simulator] Hero action: ${action}${action === 'RAISE' ? ` to ${raiseAmount} BB` : ''}`);
-        // Future: trigger game state update here
-    }, [raiseAmount]);
+        if (onAction) {
+            onAction(action, action === 'RAISE' ? raiseAmount : undefined);
+        } else {
+            console.log(`[Simulator] Hero action: ${action}${action === 'RAISE' ? ` to ${raiseAmount} BB` : ''}`);
+        }
+    }, [raiseAmount, onAction]);
 
     if (!mounted) return null;
 
@@ -226,7 +252,8 @@ export default function Simulator() {
                     <select
                         className="sim-players-select"
                         value={numPlayers}
-                        onChange={e => setNumPlayers(Number(e.target.value))}
+                        disabled={!!propNumPlayers}
+                        onChange={e => setLocalNumPlayers(Number(e.target.value))}
                     >
                         {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
                             <option key={n} value={n}>{n}</option>
@@ -249,10 +276,10 @@ export default function Simulator() {
                             {/* Board & Pot */}
                             <div className="sim-middle-container">
                                 <div className="sim-pot">
-                                    <div className="sim-pot-label">POT: 6.0 BB</div>
+                                    <div className="sim-pot-label">POT: {potSizeBB} BB</div>
                                 </div>
                                 <div className="sim-board">
-                                    {initialBoard.map((card, idx) => (
+                                    {boardCards.map((card, idx) => (
                                         <SimCard
                                             key={idx}
                                             {...card}
@@ -323,6 +350,11 @@ export default function Simulator() {
 
             {/* ── Action Bar ── */}
             <div className="sim-action-bar">
+                {onHint && (
+                    <button className="sim-btn sim-btn-hint" onClick={onHint} style={{ backgroundColor: '#eab308' }}>
+                        HINT
+                    </button>
+                )}
                 <button className="sim-btn sim-btn-fold" onClick={() => handleAction('FOLD')}>FOLD</button>
                 <button className="sim-btn sim-btn-call" onClick={() => handleAction('CALL')}>CALL</button>
                 <button className="sim-btn sim-btn-raise" onClick={() => handleAction('RAISE')}>RAISE</button>
