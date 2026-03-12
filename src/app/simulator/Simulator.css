@@ -17,6 +17,8 @@
   position: fixed;
   top: 0;
   left: 0;
+  /* Desktop Scale Factor */
+  --table-scale-desktop: 1.5;
 }
 
 /* ---- Header ---- */
@@ -420,10 +422,11 @@
     padding: 0;
   }
 
-  /* Stage becomes a tall rectangle */
+  /* Stage becomes a tall rectangle - Scaled 10% larger */
   .sim-stage {
     width: min(88vw, 340px);
     aspect-ratio: 9 / 14;
+    transform: scale(1.25);
   }
 
   /* Ellipse: tall vertical oval */
@@ -487,5 +490,14 @@
   .sim-btn {
     padding: 10px 20px;
     font-size: 13px;
+  }
+}
+/* Desktop Specific Scaling */
+@media (min-width: 769px) {
+  .sim-stage {
+    transform: scale(var(--table-scale-desktop));
+    transform-origin: center center;
+    /* Ensure no overlap with fixed header/action-bar within 100vh */
+    max-height: 80vh;
   }
 }
