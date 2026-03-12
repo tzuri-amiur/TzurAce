@@ -260,12 +260,7 @@ export default function Simulator() {
                                             </>
                                         )}
 
-                                        {/* Dealer Button */}
-                                        {seat.isDealer && (
-                                            <div className="sim-dealer-btn" style={{ position: 'absolute', top: '-4px', right: '-30px' }}>
-                                                D
-                                            </div>
-                                        )}
+                                        {/* Dealer Button removed from here */}
                                     </div>
 
                                     {/* Seat Box */}
@@ -274,10 +269,17 @@ export default function Simulator() {
                                         <div className="sim-seat-name">{seat.isHero ? 'HERO' : `P${seat.seatIndex}`}</div>
                                     </div>
 
-                                    {/* Player Chip (Blind) */}
-                                    {!seat.isFolded && (
+                                    {/* Player Action Area (Chips & Dealer Button) */}
+                                    {(!seat.isFolded || seat.isDealer) && (
                                         <div className={`sim-seat-bet pos-${seat.seatIndex}`}>
-                                            <div className="sim-chip-bet">1</div>
+                                            {!seat.isFolded && (
+                                                <div className="sim-chip-bet">1</div>
+                                            )}
+                                            {seat.isDealer && (
+                                                <div className="sim-dealer-btn">
+                                                    D
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

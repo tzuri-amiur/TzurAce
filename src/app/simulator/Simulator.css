@@ -260,6 +260,58 @@
   top: -10px;
 }
 
+/* ---- Dealer Button Position (Relative to Player Chips) ---- */
+/* Right from player's perspective = 1 step counter-clockwise */
+
+/* Hero (Bottom): Flip East to West */
+.sim-seat-bet.pos-0 .sim-dealer-btn {
+  right: calc(100% + 6px);
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* P1 (Bottom-Left): Flip South-East to North-West */
+.sim-seat-bet.pos-1 .sim-dealer-btn {
+  right: calc(100% + 4px);
+  left: auto;
+  bottom: calc(100% + 4px);
+  top: auto;
+}
+
+/* P2 (Top-Left): Flip North-East to South-West */
+.sim-seat-bet.pos-2 .sim-dealer-btn {
+  right: calc(100% + 4px);
+  left: auto;
+  top: calc(100% + 4px);
+  bottom: auto;
+}
+
+/* P3 (Top): Flip West to East */
+.sim-seat-bet.pos-3 .sim-dealer-btn {
+  left: calc(100% + 6px);
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* P4 (Top-Right): Flip North-West to South-East */
+.sim-seat-bet.pos-4 .sim-dealer-btn {
+  left: calc(100% + 4px);
+  right: auto;
+  top: calc(100% + 4px);
+  bottom: auto;
+}
+
+/* P5 (Bottom-Right): Flip South-West to North-East */
+.sim-seat-bet.pos-5 .sim-dealer-btn {
+  left: calc(100% + 4px);
+  right: auto;
+  bottom: calc(100% + 4px);
+  top: auto;
+}
+
+
 .sim-seat-cards {
   display: flex;
   gap: 0;
