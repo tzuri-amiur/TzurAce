@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './Simulator.css';
 
 // ─── Types ───────────────────────────────────────────────────
@@ -58,66 +58,45 @@ function getPositions(count: number): string[] {
     return ['SB', 'BB', ...middleLabels, 'BTN'];
 }
 
-// ─── Seat Layouts ─────────────────────────────────────────────
-// Landscape (desktop + landscape mobile): seats positioned on a horizontal ellipse.
-// Numbers relative to the stage container (percent or offset string).
-// seatId 0 = hero (bottom-center). Others go clockwise.
+function getEvenlySpacedEllipseAngles(numPoints: number, rx: number, ry: number, startAngleDeg: number): number[] {
+    const steps = 1000;
+    const dt = (2 * Math.PI) / steps;
+    const circumferences: number[] = new Array(steps + 1).fill(0);
 
-function getSeatStyles(
-    seatIndex: number,
-    totalSeats: number,
-    isPortrait: boolean
-): React.CSSProperties {
-    // Hero is always at index 0 (bottom center) of the rendered array.
-    // We map: hero=seat0=bottom-center, then go clockwise.
-
-    if (!isPortrait) {
-        // ---- LANDSCAPE: horizontal ellipse ---
-        // Position as angle around ellipse. Hero at 90° (bottom).
-        const startAngle = 90; // degrees — bottom
-        const angleStep = 360 / totalSeats;
-        const angleDeg = startAngle + seatIndex * angleStep;
-        const angleRad = (angleDeg * Math.PI) / 180;
-
-        // Rx, Ry as fraction of the stage (stage is 16:7 ratio)
-        const rx = 46; // % of stage width, half
-        const ry = 46; // % of stage height, half
-
-        const cx = 50; // center x %
-        const cy = 50; // center y %
-
-        const xPct = cx + rx * Math.cos(angleRad);
-        const yPct = cy + ry * Math.sin(angleRad);
-
-        return {
-            left: `${xPct}%`,
-            top: `${yPct}%`,
-            transform: 'translate(-50%, -50%)',
-        };
-    } else {
-        // ---- PORTRAIT: vertical ellipse ---
-        // Hero at bottom-center (270° if we think of it as normal circle but stage is portrait).
-        const startAngle = 90; // 90° = bottom of a vertical ellipse (sin(90°)=1)
-        const angleStep = 360 / totalSeats;
-        const angleDeg = startAngle + seatIndex * angleStep;
-        const angleRad = (angleDeg * Math.PI) / 180;
-
-        // Smaller rx (narrow), larger ry (tall)
-        const rx = 38; // % of stage width
-        const ry = 44; // % of stage height
-
-        const cx = 50;
-        const cy = 50;
-
-        const xPct = cx + rx * Math.cos(angleRad);
-        const yPct = cy + ry * Math.sin(angleRad);
-
-        return {
-            left: `${xPct}%`,
-            top: `${yPct}%`,
-            transform: 'translate(-50%, -50%)',
-        };
+    for (let i = 1; i <= steps; i++) {
+        const t = (i - 0.5) * dt;
+        const dx = -rx * Math.sin(t);
+        const dy = ry * Math.cos(t);
+        const ds = Math.sqrt(dx * dx + dy * dy) * dt;
+        circumferences[i] = circumferences[i - 1] + ds;
     }
+    const totalLength = circumferences[steps];
+
+    let sRad = (startAngleDeg * Math.PI) / 180;
+    sRad = sRad % (2 * Math.PI);
+    if (sRad < 0) sRad += 2 * Math.PI;
+
+    const startIdx = Math.floor((sRad / (2 * Math.PI)) * steps);
+    const fraction = (sRad / (2 * Math.PI)) * steps - startIdx;
+    const sStart = circumferences[startIdx] + fraction * (circumferences[startIdx + 1] - circumferences[startIdx]);
+
+    const angles: number[] = [];
+    for (let i = 0; i < numPoints; i++) {
+        const targetS = (sStart + (i * totalLength) / numPoints) % totalLength;
+        let idx = 0;
+        while (idx < steps && circumferences[idx + 1] < targetS) {
+            idx++;
+        }
+        let t = 0;
+        if (idx >= steps) {
+            t = 2 * Math.PI;
+        } else {
+            const frac = (targetS - circumferences[idx]) / (circumferences[idx + 1] - circumferences[idx]);
+            t = (idx + frac) * dt;
+        }
+        angles.push(t);
+    }
+    return angles;
 }
 
 // ─── Main Simulator Component ─────────────────────────────────
@@ -162,17 +141,73 @@ export default function Simulator() {
         return () => window.removeEventListener('resize', update);
     }, []);
 
-    const positions = getPositions(numPlayers);
+    const tableSeats = useMemo(() => {
+        const rawSeats = Array.from({ length: numPlayers }).map((_, i) => ({
+            seatIndex: i,
+            isHero: i === 0,
+            isFolded: false,
+            isDealer: i === 1,
+            positionLabel: getPositions(numPlayers)[i],
+        }));
 
-    // Build seat list: hero first (index 0), rest follow clockwise.
-    // Hero = last position label ("BTN area") but we put him at visual bottom.
-    const seats = Array.from({ length: numPlayers }, (_, i) => ({
-        seatIndex: i, // 0 = hero (bottom center)
-        isHero: i === 0,
-        positionLabel: positions[i],
-        isFolded: false, // static for now
-        isDealer: positions[i] === 'BTN',
-    }));
+        // Use approximate logical aspect ratios to calculate perfectly even arc lengths
+        const rx = isPortrait ? 38 * 9 : 46 * 16;
+        const ry = isPortrait ? 44 * 14 : 46 * 7;
+
+        // Compute evenly spaced T (parametric angles) along the ellipse perimeter
+        const angles = getEvenlySpacedEllipseAngles(numPlayers, rx, ry, 90);
+
+        return rawSeats.map((seat, i) => {
+            const rad = angles[i];
+
+            // Visual CSS percentages for the Seat Box
+            const rPx = isPortrait ? 38 : 46;
+            const rPy = isPortrait ? 44 : 46;
+
+            const xPct = 50 + rPx * Math.cos(rad);
+            const yPct = 50 + rPy * Math.sin(rad);
+
+            // Unit vector indicating direction right out from center
+            const vx = Math.cos(rad);
+            const vy = Math.sin(rad);
+
+            // Push chip stack inwards securely over the green felt
+            const pushRadiusX = isPortrait ? 40 : 55;
+            const pushRadiusY = seat.isHero ? (isPortrait ? 85 : 95) : (isPortrait ? 60 : 70);
+
+            const offsetX = -vx * pushRadiusX;
+            const offsetY = -vy * pushRadiusY;
+
+            // Dealer button sits on the right of the player (CCW)
+            // CSS Y goes down. Player faces (-vx, -vy). Their Right vector is (vy, -vx).
+            const rightVx = vy;
+            const rightVy = -vx;
+            const dbGap = 30; // 30 pixels Right
+
+            return {
+                ...seat,
+                style: {
+                    left: `${xPct}%`,
+                    top: `${yPct}%`,
+                    transform: 'translate(-50%, -50%)',
+                },
+                chipStyle: {
+                    position: 'absolute' as const,
+                    left: '50%',
+                    top: '50%',
+                    zIndex: 20,
+                    transform: `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`
+                },
+                dealerStyle: {
+                    position: 'absolute' as const,
+                    left: '50%',
+                    top: '50%',
+                    zIndex: 40,
+                    transform: `translate(calc(-50% + ${offsetX + rightVx * dbGap}px), calc(-50% + ${offsetY + rightVy * dbGap}px))`
+                }
+            };
+        });
+    }, [numPlayers, isPortrait]);
 
     const handleAction = useCallback((action: 'FOLD' | 'CALL' | 'RAISE') => {
         console.log(`[Simulator] Hero action: ${action}${action === 'RAISE' ? ` to ${raiseAmount} BB` : ''}`);
@@ -230,13 +265,12 @@ export default function Simulator() {
                         </div>
 
                         {/* Seats */}
-                        {seats.map((seat) => {
-                            const seatStyle = getSeatStyles(seat.seatIndex, numPlayers, isPortrait);
+                        {tableSeats.map((seat) => {
                             return (
                                 <div
                                     key={seat.seatIndex}
                                     className="sim-seat"
-                                    style={seatStyle}
+                                    style={seat.style}
                                 >
                                     {/* Cards above the seat box */}
                                     <div className="sim-seat-cards">
@@ -259,8 +293,6 @@ export default function Simulator() {
                                                 </div>
                                             </>
                                         )}
-
-                                        {/* Dealer Button removed from here */}
                                     </div>
 
                                     {/* Seat Box */}
@@ -271,12 +303,12 @@ export default function Simulator() {
 
                                     {/* Player Action Area (Chips & Dealer Button) */}
                                     {(!seat.isFolded || seat.isDealer) && (
-                                        <div className={`sim-seat-bet pos-${seat.seatIndex}`}>
+                                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
                                             {!seat.isFolded && (
-                                                <div className="sim-chip-bet">1</div>
+                                                <div className="sim-chip-bet" style={seat.chipStyle}>1</div>
                                             )}
                                             {seat.isDealer && (
-                                                <div className="sim-dealer-btn">
+                                                <div className="sim-dealer-btn" style={seat.dealerStyle}>
                                                     D
                                                 </div>
                                             )}
