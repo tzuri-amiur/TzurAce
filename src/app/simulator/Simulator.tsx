@@ -259,21 +259,16 @@ export default function Simulator() {
             <div className="sim-action-bar">
                 <button className="sim-btn sim-btn-fold" onClick={() => handleAction('FOLD')}>FOLD</button>
                 <button className="sim-btn sim-btn-call" onClick={() => handleAction('CALL')}>CALL</button>
-
-                {/* Grouped Raise controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                        type="number"
-                        className="sim-raise-input"
-                        value={raiseAmount}
-                        min={2}
-                        max={200}
-                        onChange={e => setRaiseAmount(Number(e.target.value))}
-                        aria-label="Raise amount in BB"
-                        style={{ width: isPortrait ? '70px' : '80px' }}
-                    />
-                    <button className="sim-btn sim-btn-raise" onClick={() => handleAction('RAISE')}>RAISE</button>
-                </div>
+                <button className="sim-btn sim-btn-raise" onClick={() => handleAction('RAISE')}>RAISE</button>
+                <input
+                    type="number"
+                    className="sim-raise-input"
+                    value={raiseAmount}
+                    min={2}
+                    max={200}
+                    onChange={e => setRaiseAmount(Number(e.target.value))}
+                    aria-label="Raise amount in BB"
+                />
             </div>
         </div>
     );
