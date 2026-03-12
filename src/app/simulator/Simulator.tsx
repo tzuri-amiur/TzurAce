@@ -122,10 +122,20 @@ function getSeatStyles(
 
 // ─── Main Simulator Component ─────────────────────────────────
 export default function Simulator() {
+    // Default initial state: A full board and initial blinds
     const [numPlayers, setNumPlayers] = useState(6);
     const [raiseAmount, setRaiseAmount] = useState(3);
     const [isPortrait, setIsPortrait] = useState(false);
     const [mounted, setMounted] = useState(false);
+
+    // Initial board cards (Flop: Kd Qs Jc, Turn: Th, River: 9d)
+    const initialBoard: CardData[] = [
+        { rank: 'K', suit: 'diamonds' },
+        { rank: 'Q', suit: 'spades' },
+        { rank: 'J', suit: 'clubs' },
+        { rank: 'T', suit: 'hearts' },
+        { rank: '9', suit: 'diamonds' },
+    ];
 
     // Hero cards: As Ah (fixed as default)
     const heroCards: [CardData, CardData] = [
@@ -138,6 +148,8 @@ export default function Simulator() {
     const heroCardH = isPortrait ? 74 : 92;
     const villainCardW = isPortrait ? 32 : 40;
     const villainCardH = isPortrait ? 46 : 58;
+    const boardCardW = isPortrait ? 38 : 54;
+    const boardCardH = isPortrait ? 54 : 76;
 
     // Responsive detection
     useEffect(() => {
@@ -198,9 +210,22 @@ export default function Simulator() {
                         <div className="sim-table-ellipse">
                             <div className="sim-table-inner-ring" />
                             <div className="sim-table-watermark">TZURACE</div>
-                            {/* Pot */}
-                            <div className="sim-pot">
-                                <div className="sim-pot-label">POT: 1.5 BB</div>
+
+                            {/* Board & Pot */}
+                            <div className="sim-middle-container">
+                                <div className="sim-pot">
+                                    <div className="sim-pot-label">POT: 6.0 BB</div>
+                                </div>
+                                <div className="sim-board">
+                                    {initialBoard.map((card, idx) => (
+                                        <SimCard
+                                            key={idx}
+                                            {...card}
+                                            width={boardCardW}
+                                            height={boardCardH}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
@@ -248,6 +273,13 @@ export default function Simulator() {
                                         <div className="sim-seat-pos">{seat.positionLabel}</div>
                                         <div className="sim-seat-name">{seat.isHero ? 'HERO' : `P${seat.seatIndex}`}</div>
                                     </div>
+
+                                    {/* Player Chip (Blind) */}
+                                    {!seat.isFolded && (
+                                        <div className={`sim-seat-bet pos-${seat.seatIndex}`}>
+                                            <div className="sim-chip-bet">1</div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

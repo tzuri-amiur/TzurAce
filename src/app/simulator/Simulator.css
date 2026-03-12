@@ -129,8 +129,8 @@
   user-select: none;
 }
 
-/* ---- Pot Display ---- */
-.sim-pot {
+/* ---- Board & Pot Center ---- */
+.sim-middle-container {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -138,9 +138,23 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
   z-index: 5;
   pointer-events: none;
+}
+
+.sim-board {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.sim-pot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .sim-pot-chips {
@@ -183,7 +197,67 @@
   align-items: center;
   gap: 0;
   z-index: 10;
-  /* centering via transform is applied inline */
+}
+
+/* ---- Bets (Blinds) ---- */
+.sim-seat-bet {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.sim-chip-bet {
+  width: 22px;
+  height: 22px;
+  background: white;
+  color: black;
+  border: 2px solid #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Placement rules: between seat and board */
+/* Mapping depends on the ellipse layout. 
+   On Desktop (landscape): 
+   0=bottom-mid, 1=lower-left, 2=upper-left, 3=top-mid, 4=upper-right, 5=lower-right
+*/
+.sim-seat-bet.pos-0 {
+  bottom: 100%;
+  margin-bottom: 24px;
+}
+
+/* Hero chip above cards */
+.sim-seat-bet.pos-3 {
+  top: 100%;
+  margin-top: 24px;
+}
+
+/* Top player chip below box */
+.sim-seat-bet.pos-1 {
+  right: -30px;
+  top: -10px;
+}
+
+.sim-seat-bet.pos-2 {
+  right: -30px;
+  bottom: -10px;
+}
+
+.sim-seat-bet.pos-4 {
+  left: -30px;
+  bottom: -10px;
+}
+
+.sim-seat-bet.pos-5 {
+  left: -30px;
+  top: -10px;
 }
 
 .sim-seat-cards {
@@ -474,6 +548,20 @@
     padding: 10px 4px;
     font-size: 13px;
   }
+
+  /* Mobile Board Cards - Scale down internal text to fit the smaller size */
+  .sim-board .sim-card {
+    padding: 2px;
+  }
+
+  .sim-board .sim-card-rank-top,
+  .sim-board .sim-card-rank-bot {
+    font-size: 9px;
+  }
+
+  .sim-board .sim-card-suit {
+    font-size: 14px;
+  }
 }
 
 /* Landscape mobile — keep desktop layout, just a bit smaller */
@@ -492,6 +580,7 @@
     font-size: 13px;
   }
 }
+
 /* Desktop Specific Scaling */
 @media (min-width: 769px) {
   .sim-stage {
