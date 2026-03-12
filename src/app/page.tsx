@@ -8,7 +8,9 @@ export default function LandingPage() {
 
   const handleAction = (name: string) => {
     console.log(`[ACTION]: ${name} clicked`);
-    if (name.startsWith('Trainer')) {
+    if (name.includes('Simulator')) {
+      router.push('/simulator');
+    } else if (name.startsWith('Trainer')) {
       router.push('/trainer');
     }
   };
@@ -74,7 +76,7 @@ export default function LandingPage() {
           <div style={{ display: 'flex', flexDirection: 'row', gap: '16px', justifyContent: 'flex-start', flexWrap: 'wrap' }}>
             {[
               { title: 'Pre-Flop Trainer', icon: <LayoutGrid size={24} /> },
-              { title: 'Post-Flop Lab', icon: <Settings size={24} /> },
+              { title: 'Simulator', icon: <Target size={24} /> },
               { title: 'ICM Simulator', icon: <Target size={24} /> }
             ].map((trainer, i) => (
               <div key={i} style={{

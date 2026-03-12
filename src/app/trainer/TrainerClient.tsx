@@ -165,6 +165,8 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         message: string;
     } | null>(null);
 
+    const isLandscapeMobile = mounted && windowSize.width <= 932 && windowSize.width > windowSize.height;
+
     useEffect(() => {
         setMounted(true);
         const handleResize = () => {
@@ -300,6 +302,10 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
 
     const seats = isPortrait ? PORTRAIT_SEATS : LANDSCAPE_SEATS;
 
+    // 7XL Style seat dimensions
+    const seatWidth = isLandscapeMobile ? 90 : (isPortrait ? 100 : 120);
+    const seatHeight = isLandscapeMobile ? 45 : (isPortrait ? 50 : 60);
+
     // --- Mobile Scaling ---
     // On mobile, compute explicit table dimensions and scale seats proportionally.
     // On desktop (width >= 1024), CSS handles layout via maxWidth + aspectRatio.
@@ -310,8 +316,14 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
             // Portrait: width-constrained, height capped by viewport
             tableW = windowSize.width - 16;
             tableH = Math.min(tableW * (1.2), windowSize.height - 200);
+        } else if (isLandscapeMobile) {
+            // 7XL Landscape: space for right sidebar (160px)
+            const availW = windowSize.width - 170;
+            const availH = windowSize.height - 40;
+            tableH = Math.min(availH, 450);
+            tableW = Math.min(tableH * (16 / 9), availW);
         } else {
-            // Landscape: height-constrained (action bar + title takes ~150px)
+            // Normal Landscape: height-constrained (action bar + title takes ~150px)
             const availH = windowSize.height - 150;
             tableH = Math.min(availH, 380);
             tableW = Math.min(tableH * (16 / 9), windowSize.width - 40);
@@ -400,11 +412,11 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     return (
         <div style={{
             minHeight: '100vh',
-            backgroundColor: '#020617',
+            backgroundColor: isLandscapeMobile ? '#111111' : '#020617',
             color: 'white',
             fontFamily: 'Inter, system-ui, sans-serif',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: isLandscapeMobile ? 'row' : 'column',
             padding: isMobile ? '0' : '10px',
             overflow: 'hidden',
             height: '100dvh'
@@ -481,295 +493,382 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 </div>
             )}
 
-            {/* Page Title */}
-            <div style={{ textAlign: 'center', marginBottom: '0' }}>
-                <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px', letterSpacing: '2px' }}>
-                    TRAINING LAB <span style={{ color: 'white' }}>| {settings.scenario === 'RFI' ? 'RFI' : 'RESPONSE'}</span>
-                </div>
-            </div>
-
-            {/* Table Container */}
+            {/* Table Area (Center/Left) */}
             <div style={{
                 flex: 1,
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: isMobile && isPortrait ? '2px 0' : '0',
+                flexDirection: 'column',
                 position: 'relative',
-                // On desktop: cap height so action buttons are always visible below.
-                maxHeight: !isMobile ? 'calc(100vh - 180px)' : 'none',
+                height: '100%'
             }}>
+                {/* Page Title */}
                 <div style={{
-                    position: 'relative',
-                    // On mobile use explicit pixel dimensions (computed from viewport).
-                    // On desktop fall back to CSS fluid sizing via maxWidth + aspectRatio.
-                    ...(tableW > 0
-                        ? { width: `${tableW}px`, height: `${tableH}px` }
-                        : {
-                            width: '100%',
-                            maxWidth: isPortrait ? '450px' : '1000px',
-                            aspectRatio: isPortrait ? '9/16' : '16/9',
-                        }
-                    ),
+                    textAlign: 'center',
+                    marginBottom: '0',
+                    display: isLandscapeMobile ? 'none' : 'block'
+                }}>
+                    <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px', letterSpacing: '2px' }}>
+                        TRAINING LAB <span style={{ color: 'white' }}>| {settings.scenario === 'RFI' ? 'RFI' : 'RESPONSE'}</span>
+                    </div>
+                </div>
+
+                {/* Table Container */}
+                <div style={{
+                    flex: 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    transition: 'all 0.5s ease'
+                    padding: isMobile && isPortrait ? '2px 0' : '0',
+                    position: 'relative',
+                    // On desktop: cap height so action buttons are always visible below.
+                    maxHeight: !isMobile ? 'calc(100vh - 180px)' : 'none',
                 }}>
-                    {/* The Poker Table */}
                     <div style={{
-                        width: isPortrait ? '92%' : '85%',
-                        height: isPortrait ? '98%' : '75%',
-                        backgroundColor: '#065f46',
-                        borderRadius: isPortrait ? '500px' : '1000px',
-                        border: '12px solid #111827',
-                        boxShadow: '0 0 60px rgba(0,0,0,0.8), inset 0 0 120px rgba(0,0,0,0.6)',
                         position: 'relative',
+                        // On mobile use explicit pixel dimensions (computed from viewport).
+                        // On desktop fall back to CSS fluid sizing via maxWidth + aspectRatio.
+                        ...(tableW > 0
+                            ? { width: `${tableW}px`, height: `${tableH}px` }
+                            : {
+                                width: '100%',
+                                maxWidth: isPortrait ? '450px' : '1000px',
+                                aspectRatio: isPortrait ? '9/16' : '16/9',
+                            }
+                        ),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        overflow: 'hidden',
                         transition: 'all 0.5s ease'
                     }}>
-                        {/* Watermark */}
+                        {/* The Poker Table */}
                         <div style={{
-                            fontSize: isPortrait ? '32px' : '48px',
-                            fontWeight: '900',
-                            color: 'rgba(255,255,255,0.03)',
-                            userSelect: 'none',
-                            letterSpacing: isPortrait ? '5px' : '10px',
-                            transform: isPortrait ? 'rotate(90deg)' : 'none',
-                            whiteSpace: 'nowrap'
+                            width: isPortrait ? '92%' : '85%',
+                            height: isPortrait ? '98%' : '75%',
+                            background: isLandscapeMobile
+                                ? 'radial-gradient(circle, #0b4d3c 0%, #052e24 100%)'
+                                : '#065f46',
+                            borderRadius: isPortrait ? '500px' : '1000px',
+                            border: isLandscapeMobile ? '8px solid #222' : '12px solid #111827',
+                            boxShadow: '0 0 60px rgba(0,0,0,0.8), inset 0 0 120px rgba(0,0,0,0.6)',
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            transition: 'all 0.5s ease'
                         }}>
-                            TZURACE
+                            {/* 7XL Style Felt Texture (Overlay) */}
+                            {isLandscapeMobile && (
+                                <div style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    opacity: 0.05,
+                                    backgroundImage: 'repeating-linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), repeating-linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000)',
+                                    backgroundPosition: '0 0, 10px 10px',
+                                    backgroundSize: '20px 20px'
+                                }} />
+                            )}
+
+                            {/* Watermark */}
+                            <div style={{
+                                fontSize: isPortrait ? '32px' : '48px',
+                                fontWeight: '900',
+                                color: isLandscapeMobile ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)',
+                                userSelect: 'none',
+                                letterSpacing: isPortrait ? '5px' : '10px',
+                                transform: isPortrait ? 'rotate(90deg)' : 'none',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                TZURACE
+                            </div>
+
+                            {/* Table inner line */}
+                            <div style={{
+                                position: 'absolute',
+                                inset: '15px',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                borderRadius: '1000px'
+                            }}></div>
+
+                            <div style={{
+                                position: 'absolute',
+                                top: isPortrait ? '45%' : '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '4px',
+                                zIndex: 5
+                            }}>
+                                <ChipStack count={3} />
+                                <div style={{
+                                    backgroundColor: 'rgba(0,0,0,0.4)',
+                                    padding: '4px 12px',
+                                    borderRadius: '100px',
+                                    color: '#10b981',
+                                    fontSize: isLandscapeMobile ? '12px' : '14px',
+                                    fontWeight: '900',
+                                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                                    backdropFilter: 'blur(4px)',
+                                    letterSpacing: '1px'
+                                }}>
+                                    POT: 1.5 BB
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Table inner line */}
-                        <div style={{
-                            position: 'absolute',
-                            inset: '20px',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '1000px'
-                        }}></div>
+                        {/* Action Order for Fold States: UTG, HJ, CO, BTN, SB, BB */}
+                        {/* Position Indices: SB:0, BB:1, UTG:2, HJ:3, CO:4, BTN:5 */}
+                        {/* Action Order Indices: 2, 3, 4, 5, 0, 1 */}
 
+                        {/* Seats */}
+                        {seats.map((seat) => {
+                            const ACTION_ORDER = [2, 3, 4, 5, 0, 1];
+                            const label = getPositionLabel(seat.id);
+                            const posIndex = POSITIONS.indexOf(label as Position);
+                            const isHero = seat.id === 5;
+                            const isDealer = label === 'BTN';
+                            const isSB = label === 'SB';
+                            const isBB = label === 'BB';
+
+                            // Fold Logic: Players between BB and Hero act before Hero
+                            const actionIndex = ACTION_ORDER.indexOf(posIndex);
+                            const heroActionIndex = ACTION_ORDER.indexOf(heroGamePosition);
+                            const isFolded = !isHero && actionIndex < heroActionIndex;
+
+                            return (
+                                // TWO-LAYER WRAPPER:
+                                // Outer div: handles absolute positioning + centering translate ONLY.
+                                //   (no scale here — otherwise translate(-50%) is distorted by scale)
+                                // Inner div: handles scale ONLY.
+                                //   (no translate here — so scale pivot is always the element's own center)
+                                <div
+                                    key={seat.id}
+                                    className="absolute transition-all duration-500"
+                                    style={{
+                                        top: seat.top,
+                                        left: seat.left,
+                                        right: seat.right,
+                                        bottom: seat.bottom,
+                                        transform: seat.translate ? `translate(${seat.translate})` : 'none',
+                                        zIndex: 10,
+                                    }}
+                                >
+                                    {/* Scale wrapper — applies seatScale around its own center */}
+                                    <div style={{
+                                        transform: seatScale !== 1.0 ? `scale(${seatScale.toFixed(3)})` : 'none',
+                                        transformOrigin: 'center center',
+                                        position: 'relative',
+                                    }}>
+                                        {/* CHILD ANCHORED Bet Area */}
+                                        {(isSB || isBB) && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                zIndex: 30,
+                                                ...getBetStyles(seat.id)
+                                            }}>
+                                                <BetArea
+                                                    amount={isSB ? '0.5' : '1.0'}
+                                                    label={isSB ? '0.5 BB' : '1.0 BB'}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Dealer Button */}
+                                        {isDealer && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                width: '32px',
+                                                height: '32px',
+                                                backgroundColor: 'white',
+                                                color: 'black',
+                                                borderRadius: '50%',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '14px',
+                                                fontWeight: '900',
+                                                boxShadow: '0 4px 10px rgba(0,0,0,0.6)',
+                                                border: '2px solid #10b981',
+                                                zIndex: 40,
+                                                ...getDealerButtonStyles(seat.id)
+                                            }}>D</div>
+                                        )}
+
+                                        {!isFolded && (
+                                            isHero ? (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '-108px',
+                                                        left: '50%',
+                                                        transform: 'translateX(-50%)',
+                                                        display: 'flex',
+                                                        gap: '0',
+                                                        zIndex: 15
+                                                    }}
+                                                >
+                                                    <div style={{ transform: 'rotate(-3deg)' }}>
+                                                        <Card {...heroCards[0]} width={85} height={120} />
+                                                    </div>
+                                                    <div style={{ transform: 'rotate(3deg)', marginLeft: '-20px' }}>
+                                                        <Card {...heroCards[1]} width={85} height={120} />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '-55px',
+                                                    left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    display: 'flex',
+                                                    gap: '4px',
+                                                    zIndex: 15
+                                                }}>
+                                                    <div style={{ transform: 'rotate(-3deg)' }}><CardBack /></div>
+                                                    <div style={{ transform: 'rotate(3deg)', marginLeft: '-15px' }}><CardBack /></div>
+                                                </div>
+                                            )
+                                        )}
+
+                                        {/* Seat UI */}
+                                        <div style={{
+                                            backgroundColor: isHero ? '#0f172a' : '#1e293b',
+                                            border: isHero ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                                            minWidth: isLandscapeMobile ? '80px' : (isHero ? '150px' : '100px'),
+                                            width: isLandscapeMobile ? '80px' : (isHero ? '150px' : 'fit-content'),
+                                            padding: isLandscapeMobile ? '4px' : (isHero ? '12px 0' : '12px 24px'),
+                                            textAlign: 'center',
+                                            boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
+                                            transition: 'all 0.5s',
+                                            animation: isHero ? 'pulse 2s infinite' : 'none',
+                                            opacity: isFolded ? 0.4 : 1,
+                                            filter: isFolded ? 'grayscale(0.5)' : 'none',
+                                            borderRadius: isLandscapeMobile ? '4px' : '0'
+                                        }}>
+                                            <div style={{ fontSize: isLandscapeMobile ? '8px' : '10px', color: isHero ? '#10b981' : '#94a3b8', textTransform: 'uppercase', marginBottom: isLandscapeMobile ? '1px' : '4px', fontWeight: 'bold' }}>
+                                                {label}
+                                            </div>
+                                            <div style={{ color: 'white', fontSize: isLandscapeMobile ? '11px' : '14px', fontWeight: 'bold' }}>
+                                                {isHero ? 'HERO' : `Player ${seat.id}`}
+                                            </div>
+                                            {isHero && !isLandscapeMobile && (
+                                                <div style={{
+                                                    marginTop: '8px',
+                                                    fontSize: '11px',
+                                                    color: '#10b981',
+                                                    borderTop: '1px solid rgba(255,255,255,0.05)',
+                                                    paddingTop: '8px',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    Hand: <span style={{ color: 'white' }}>
+                                                        {currentHand} {mounted && settings.showHandRank ? `(${getHandRank(currentHand)}/169)` : ''}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* Action Sidebar (Right Side - Landscape Mobile Only) */}
+            {isLandscapeMobile ? (
+                <div style={{
+                    width: '160px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '12px 8px',
+                    gap: '10px',
+                    zIndex: 100
+                }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <button
+                            onClick={() => handleAction('FOLD')}
+                            className="text-white font-bold py-3 px-2 rounded bg-slate-800 border border-slate-700 active:scale-95 transition-all text-xs"
+                        >
+                            FOLD
+                        </button>
+                        <button
+                            onClick={() => handleAction('CALL')}
+                            className="text-white font-bold py-3 px-2 rounded bg-slate-800 border border-slate-700 active:scale-95 transition-all text-xs"
+                        >
+                            CALL
+                        </button>
+                        <button
+                            onClick={() => handleAction('RAISE')}
+                            className="font-bold py-3 px-2 rounded bg-emerald-600 text-white border border-emerald-500 active:scale-95 transition-all text-xs shadow-lg shadow-emerald-900/20"
+                        >
+                            RAISE
+                        </button>
+
+                        {/* Slider Placeholder (7XL Style) */}
                         <div style={{
-                            position: 'absolute',
-                            top: isPortrait ? '45%' : '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
+                            flex: 1,
+                            margin: '10px 0',
+                            border: '1px dashed rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
                             display: 'flex',
-                            flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '4px',
-                            zIndex: 5
+                            justifyContent: 'center',
+                            backgroundColor: 'rgba(0,0,0,0.2)'
                         }}>
-                            <ChipStack count={3} />
-                            <div style={{
-                                backgroundColor: 'rgba(0,0,0,0.4)',
-                                padding: '4px 12px',
-                                borderRadius: '100px',
-                                color: '#10b981',
-                                fontSize: '14px',
-                                fontWeight: '900',
-                                border: '1px solid rgba(16, 185, 129, 0.2)',
-                                backdropFilter: 'blur(4px)',
-                                letterSpacing: '1px'
-                            }}>
-                                POT: 1.5 BB
+                            <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', transform: 'rotate(-90deg)', whiteSpace: 'nowrap' }}>
+                                RAISE SLIDER
                             </div>
                         </div>
                     </div>
 
-                    {/* Action Order for Fold States: UTG, HJ, CO, BTN, SB, BB */}
-                    {/* Position Indices: SB:0, BB:1, UTG:2, HJ:3, CO:4, BTN:5 */}
-                    {/* Action Order Indices: 2, 3, 4, 5, 0, 1 */}
-
-                    {/* Seats */}
-                    {seats.map((seat) => {
-                        const ACTION_ORDER = [2, 3, 4, 5, 0, 1];
-                        const label = getPositionLabel(seat.id);
-                        const posIndex = POSITIONS.indexOf(label as Position);
-                        const isHero = seat.id === 5;
-                        const isDealer = label === 'BTN';
-                        const isSB = label === 'SB';
-                        const isBB = label === 'BB';
-
-                        // Fold Logic: Players between BB and Hero act before Hero
-                        const actionIndex = ACTION_ORDER.indexOf(posIndex);
-                        const heroActionIndex = ACTION_ORDER.indexOf(heroGamePosition);
-                        const isFolded = !isHero && actionIndex < heroActionIndex;
-
-                        return (
-                            // TWO-LAYER WRAPPER:
-                            // Outer div: handles absolute positioning + centering translate ONLY.
-                            //   (no scale here — otherwise translate(-50%) is distorted by scale)
-                            // Inner div: handles scale ONLY.
-                            //   (no translate here — so scale pivot is always the element's own center)
-                            <div
-                                key={seat.id}
-                                className="absolute transition-all duration-500"
-                                style={{
-                                    top: seat.top,
-                                    left: seat.left,
-                                    right: seat.right,
-                                    bottom: seat.bottom,
-                                    transform: seat.translate ? `translate(${seat.translate})` : 'none',
-                                    zIndex: 10,
-                                }}
-                            >
-                                {/* Scale wrapper — applies seatScale around its own center */}
-                                <div style={{
-                                    transform: seatScale !== 1.0 ? `scale(${seatScale.toFixed(3)})` : 'none',
-                                    transformOrigin: 'center center',
-                                    position: 'relative',
-                                }}>
-                                    {/* CHILD ANCHORED Bet Area */}
-                                    {(isSB || isBB) && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            zIndex: 30,
-                                            ...getBetStyles(seat.id)
-                                        }}>
-                                            <BetArea
-                                                amount={isSB ? '0.5' : '1.0'}
-                                                label={isSB ? '0.5 BB' : '1.0 BB'}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Dealer Button */}
-                                    {isDealer && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            width: '32px',
-                                            height: '32px',
-                                            backgroundColor: 'white',
-                                            color: 'black',
-                                            borderRadius: '50%',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '14px',
-                                            fontWeight: '900',
-                                            boxShadow: '0 4px 10px rgba(0,0,0,0.6)',
-                                            border: '2px solid #10b981',
-                                            zIndex: 40,
-                                            ...getDealerButtonStyles(seat.id)
-                                        }}>D</div>
-                                    )}
-
-                                    {!isFolded && (
-                                        isHero ? (
-                                            <div
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: '-108px',
-                                                    left: '50%',
-                                                    transform: 'translateX(-50%)',
-                                                    display: 'flex',
-                                                    gap: '0',
-                                                    zIndex: 15
-                                                }}
-                                            >
-                                                <div style={{ transform: 'rotate(-3deg)' }}>
-                                                    <Card {...heroCards[0]} width={85} height={120} />
-                                                </div>
-                                                <div style={{ transform: 'rotate(3deg)', marginLeft: '-20px' }}>
-                                                    <Card {...heroCards[1]} width={85} height={120} />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '-55px',
-                                                left: '50%',
-                                                transform: 'translateX(-50%)',
-                                                display: 'flex',
-                                                gap: '4px',
-                                                zIndex: 15
-                                            }}>
-                                                <div style={{ transform: 'rotate(-3deg)' }}><CardBack /></div>
-                                                <div style={{ transform: 'rotate(3deg)', marginLeft: '-15px' }}><CardBack /></div>
-                                            </div>
-                                        )
-                                    )}
-
-                                    {/* Seat UI */}
-                                    <div style={{
-                                        backgroundColor: isHero ? '#0f172a' : '#1e293b',
-                                        border: isHero ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-                                        minWidth: isHero ? '150px' : '100px',
-                                        width: isHero ? '150px' : 'fit-content',
-                                        padding: isHero ? '12px 0' : '12px 24px',
-                                        textAlign: 'center',
-                                        boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
-                                        transition: 'all 0.5s',
-                                        animation: isHero ? 'pulse 2s infinite' : 'none',
-                                        opacity: isFolded ? 0.4 : 1,
-                                        filter: isFolded ? 'grayscale(0.5)' : 'none'
-                                    }}>
-                                        <div style={{ fontSize: '10px', color: isHero ? '#10b981' : '#94a3b8', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 'bold' }}>
-                                            {label}
-                                        </div>
-                                        <div style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>
-                                            {isHero ? 'HERO' : `Player ${seat.id}`}
-                                        </div>
-                                        {isHero && (
-                                            <div style={{
-                                                marginTop: '8px',
-                                                fontSize: '11px',
-                                                color: '#10b981',
-                                                borderTop: '1px solid rgba(255,255,255,0.05)',
-                                                paddingTop: '8px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                Hand: <span style={{ color: 'white' }}>
-                                                    {currentHand} {mounted && settings.showHandRank ? `(${getHandRank(currentHand)}/169)` : ''}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                    <button
+                        onClick={toggleHint}
+                        className={`font-bold py-3 px-2 rounded flex items-center justify-center gap-2 transition-all text-xs ${showHint ? 'bg-amber-500/20 border border-amber-500 text-amber-500' : 'bg-slate-800 border border-slate-700 text-slate-400'}`}
+                    >
+                        <span>💡</span>
+                        <span>{showHint ? 'HIDE' : 'HINT'}</span>
+                    </button>
                 </div>
-            </div>
+            ) : (
+                /* Standard Action Buttons Bar (Portrait/Desktop) */
+                <div className={`bottom-3 left-0 right-0 bg-slate-950/90 backdrop-blur-xl border-t border-white/10 grid grid-cols-2 gap-2 z-50 md:relative md:bottom-auto md:left-auto md:right-auto md:bg-transparent md:border-none md:p-0 md:flex md:flex-row md:items-center md:justify-center md:gap-5 transition-all ${isMobile ? 'relative p-1 pb-2' : 'p-2'}`}>
+                    <button
+                        onClick={() => handleAction('FOLD')}
+                        style={{ ...buttonStyle }}
+                        className="action-btn bg-red-500/10 border border-red-500/50 text-red-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
+                    >
+                        FOLD
+                    </button>
+                    <button
+                        onClick={() => handleAction('CALL')}
+                        style={{ ...buttonStyle }}
+                        className="action-btn bg-blue-500/10 border border-blue-500/50 text-blue-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
+                    >
+                        CALL
+                    </button>
+                    <button
+                        onClick={() => handleAction('RAISE')}
+                        style={{ ...buttonStyle }}
+                        className="action-btn bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
+                    >
+                        RAISE
+                    </button>
 
-            {/* Action Buttons Bar */}
-            <div className={`bottom-3 left-0 right-0 bg-slate-950/90 backdrop-blur-xl border-t border-white/10 grid grid-cols-2 gap-2 z-50 md:relative md:bottom-auto md:left-auto md:right-auto md:bg-transparent md:border-none md:p-0 md:flex md:flex-row md:items-center md:justify-center md:gap-5 transition-all ${isMobile ? 'relative p-1 pb-2' : 'p-2'}`}>
-                <button
-                    onClick={() => handleAction('FOLD')}
-                    style={{ ...buttonStyle }}
-                    className="action-btn bg-red-500/10 border border-red-500/50 text-red-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
-                >
-                    FOLD
-                </button>
-                <button
-                    onClick={() => handleAction('CALL')}
-                    style={{ ...buttonStyle }}
-                    className="action-btn bg-blue-500/10 border border-blue-500/50 text-blue-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
-                >
-                    CALL
-                </button>
-                <button
-                    onClick={() => handleAction('RAISE')}
-                    style={{ ...buttonStyle }}
-                    className="action-btn bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 py-2 px-4 text-sm md:py-4 md:px-8 md:text-base"
-                >
-                    RAISE
-                </button>
-
-                <button
-                    onClick={toggleHint}
-                    style={{ ...buttonStyle, minWidth: 'unset' }}
-                    className={`action-btn flex items-center justify-center gap-2 py-2 px-4 text-sm md:py-3 md:px-4 ${showHint ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-white/5 border-white/10 text-slate-400'}`}
-                    title="Toggle Range Hint"
-                >
-                    <span className="text-lg md:text-xl">💡</span>
-                    <span className="text-xs md:text-sm font-black">{showHint ? 'HIDE' : 'HINT'}</span>
-                </button>
-            </div>
+                    <button
+                        onClick={toggleHint}
+                        style={{ ...buttonStyle, minWidth: 'unset' }}
+                        className={`action-btn flex items-center justify-center gap-2 py-2 px-4 text-sm md:py-3 md:px-4 ${showHint ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'bg-white/5 border-white/10 text-slate-400'}`}
+                        title="Toggle Range Hint"
+                    >
+                        <span className="text-lg md:text-xl">💡</span>
+                        <span className="text-xs md:text-sm font-black">{showHint ? 'HIDE' : 'HINT'}</span>
+                    </button>
+                </div>
+            )}
 
             <style jsx>{`
                 @keyframes pulse {
