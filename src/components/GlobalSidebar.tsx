@@ -31,7 +31,8 @@ export default function GlobalSidebar({ isOpen, onClose, currentUser, onLogout, 
     const positions: Position[] = ['RANDOM', 'UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
     const scenarios: { value: Scenario; label: string }[] = [
         { value: 'RFI', label: 'RFI (Unopened)' },
-        { value: 'RESPONSE', label: 'Face RFI / 3-Bet' }
+        { value: 'RESPONSE', label: 'Face RFI / 3-Bet' },
+        { value: 'RANDOM', label: 'Mixed (Random)' }
     ];
 
     return (

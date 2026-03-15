@@ -107,19 +107,36 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         const heroPosLabel = POSITIONS[newHeroPosIndex];
         const heroActionIdx = ACTION_ORDER.indexOf(heroPosLabel);
 
-        // Determine Scenario: RFI or FACING_OPEN (50/50 if not UTG)
+        // Determine Scenario: RFI or FACING_OPEN based on settings
         let scenario: 'RFI' | 'FACING_OPEN' = 'RFI';
         let raiser: Position | null = null;
 
-        // Can only face an open if we aren't UTG
-        if (heroPosLabel !== 'UTG' && Math.random() > 0.5) {
-            scenario = 'FACING_OPEN';
+        const trainingMode = settings.scenario || 'RANDOM';
+
+        if (trainingMode === 'RESPONSE') {
+            if (heroPosLabel !== 'UTG') {
+                scenario = 'FACING_OPEN';
+            } else {
+                scenario = 'RFI'; // UTG cannot face an open
+            }
+        } else if (trainingMode === 'RFI') {
+            scenario = 'RFI';
+        } else {
+            // RANDOM Mode: 50/50 if not UTG
+            if (heroPosLabel !== 'UTG' && Math.random() > 0.5) {
+                scenario = 'FACING_OPEN';
+            } else {
+                scenario = 'RFI';
+            }
+        }
+
+        if (scenario === 'FACING_OPEN') {
             // Pick a raiser from players who act BEFORE Hero in ACTION_ORDER
             const validRaisers = ACTION_ORDER.slice(0, heroActionIdx);
             if (validRaisers.length > 0) {
                 raiser = validRaisers[Math.floor(Math.random() * validRaisers.length)];
             } else {
-                scenario = 'RFI'; // Fallback if no valid raisers
+                scenario = 'RFI'; // Fallback
             }
         }
 
@@ -366,7 +383,7 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
 
                     if (posLabel === raiserPosition) {
                         status = 'active';
-                        betAmount = 2.5;
+                        betAmount = 3.0;
                     } else if (actionIdx < heroActionIdx) {
                         // Everyone else before Hero is folded
                         status = 'folded';

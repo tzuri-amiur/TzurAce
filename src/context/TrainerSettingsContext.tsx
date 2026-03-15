@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type Position = 'SB' | 'BB' | 'UTG' | 'HJ' | 'CO' | 'BTN' | 'RANDOM';
-export type Scenario = 'RFI' | 'RESPONSE';
+export type Scenario = 'RFI' | 'RESPONSE' | 'RANDOM';
 
 interface TrainerSettings {
     showHandRank: boolean;
@@ -18,7 +18,7 @@ interface TrainerSettingsContextType {
 const defaultSettings: TrainerSettings = {
     showHandRank: true,
     heroPosition: 'RANDOM',
-    scenario: 'RFI',
+    scenario: 'RANDOM',
 };
 
 const TrainerSettingsContext = createContext<TrainerSettingsContextType | undefined>(undefined);

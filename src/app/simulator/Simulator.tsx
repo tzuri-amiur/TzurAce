@@ -30,13 +30,73 @@ function SimCardBack({ width = 42, height = 60 }: { width?: number; height?: num
     );
 }
 
-// ─── Chip Stack ───────────────────────────────────────────────
-function ChipStack({ count = 3 }: { count?: number }) {
+// ─── Chip Stacking Logic ──────────────────────────────────────
+const CHIP_DENOMINATIONS = [
+    { value: 100, color: '#1f2937', textColor: 'white' },
+    { value: 10, color: '#3b82f6', textColor: 'white' },
+    { value: 5, color: '#22c55e', textColor: 'white' },
+    { value: 1, color: '#ef4444', textColor: 'white' },
+    { value: 0.5, color: '#facc15', textColor: '#1e293b' },
+];
+
+function calculateChips(amount: number) {
+    let remaining = amount;
+    const chips: typeof CHIP_DENOMINATIONS = [];
+    const sorted = [...CHIP_DENOMINATIONS].sort((a, b) => b.value - a.value);
+
+    for (const den of sorted) {
+        while (remaining >= den.value - 0.001) {
+            chips.push(den);
+            remaining -= den.value;
+        }
+    }
+    return chips;
+}
+
+function ChipStack({ amount, showLabel = true }: { amount: number; showLabel?: boolean }) {
+    if (amount <= 0) return null;
+    const chips = calculateChips(amount);
+
     return (
-        <div className="sim-pot-chips">
-            {Array.from({ length: Math.min(count, 5) }).map((_, i) => (
-                <div key={i} className="sim-chip">●</div>
-            ))}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <div style={{ position: 'relative', width: 'var(--chip-size)', height: 'var(--chip-size)', marginBottom: (chips.length - 1) * 3 }}>
+                {chips.slice(0, 10).map((chip, i) => (
+                    <div
+                        key={i}
+                        className="sim-chip-bet"
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            transform: `translateY(${-i * 3}px)`,
+                            background: chip.color,
+                            color: chip.textColor,
+                            zIndex: 10 + i,
+                            margin: 0,
+                            border: `1px solid rgba(0,0,0,0.2)`,
+                            boxShadow: i === 0 ? '0 4px 8px rgba(0,0,0,0.5)' : 'none'
+                        }}
+                    >
+                        {chip.value}
+                    </div>
+                ))}
+            </div>
+            {showLabel && (
+                <div style={{
+                    background: 'rgba(2, 6, 23, 0.9)',
+                    padding: '2px 8px',
+                    borderRadius: '100px',
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    color: '#10b981',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    marginTop: (chips.length > 1 ? -2 : 2), // Adjust for stack height
+                    zIndex: 50,
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+                    letterSpacing: '0.5px'
+                }}>
+                    {amount}
+                </div>
+            )}
         </div>
     );
 }
@@ -281,7 +341,7 @@ export default function Simulator({
                             {/* Board & Pot */}
                             <div className="sim-middle-container">
                                 <div className="sim-pot">
-                                    {gameState !== 'PRE_FLOP' && <ChipStack count={Math.floor(potSizeBB / 2)} />}
+                                    {gameState !== 'PRE_FLOP' && <ChipStack amount={potSizeBB} showLabel={false} />}
                                     <div className="sim-pot-label">POT: {potSizeBB} BB</div>
                                 </div>
                                 {gameState !== 'PRE_FLOP' && (
@@ -339,14 +399,8 @@ export default function Simulator({
                                     {/* Player Action Area (Chips & Dealer Button) - Logic moved: render if status allows or is BTN */}
                                     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
                                         {seat.status !== 'folded' && seat.betAmount && seat.betAmount > 0 ? (
-                                            <div
-                                                className="sim-chip-bet"
-                                                style={{
-                                                    ...seat.chipStyle,
-                                                    background: seat.betAmount === 0.5 ? '#f59e0b' : (seat.betAmount === 1.0 ? '#ef4444' : undefined)
-                                                }}
-                                            >
-                                                {seat.betAmount}
+                                            <div style={{ ...seat.chipStyle }}>
+                                                <ChipStack amount={seat.betAmount} />
                                             </div>
                                         ) : null}
                                         {seat.positionLabel === 'BTN' && (
