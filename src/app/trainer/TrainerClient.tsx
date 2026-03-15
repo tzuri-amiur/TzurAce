@@ -1,8 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
-import { getHandRank, isHandInRange, RFI_RANGES } from '@/utils/rangeUtils';
+import { getHandRank, getRecommendation, RFI_RANGES } from '@/utils/rangeUtils';
 import { getRandomHand, getCardsFromHand, CardData, Suit } from '@/utils/handUtils';
 import { useTrainerSettings, Position as TrainingPosition } from '@/context/TrainerSettingsContext';
 import HandGrid from './HandGrid';
@@ -68,6 +67,8 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     const [heroCards, setHeroCards] = useState<[CardData, CardData]>(initialCards);
     const [boardCards, setBoardCards] = useState<CardData[]>([]);
     const [potSizeBB, setPotSizeBB] = useState<number>(1.5);
+    const [currentScenario, setCurrentScenario] = useState<'RFI' | 'FACING_OPEN'>('RFI');
+    const [raiserPosition, setRaiserPosition] = useState<Position | null>(null);
 
     // Initial Rank Logging
     useEffect(() => {
@@ -96,12 +97,34 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     }, []);
 
     const generateScenario = () => {
-        let newHeroPos = heroGamePosition;
+        let newHeroPosIndex = heroGamePosition;
         if (settings.heroPosition === 'RANDOM') {
             const rfiIndices = [0, 2, 3, 4, 5]; // Excluding index 1 (BB)
-            newHeroPos = rfiIndices[Math.floor(Math.random() * rfiIndices.length)];
-            setHeroGamePosition(newHeroPos);
+            newHeroPosIndex = rfiIndices[Math.floor(Math.random() * rfiIndices.length)];
+            setHeroGamePosition(newHeroPosIndex);
         }
+
+        const heroPosLabel = POSITIONS[newHeroPosIndex];
+        const heroActionIdx = ACTION_ORDER.indexOf(heroPosLabel);
+
+        // Determine Scenario: RFI or FACING_OPEN (50/50 if not UTG)
+        let scenario: 'RFI' | 'FACING_OPEN' = 'RFI';
+        let raiser: Position | null = null;
+
+        // Can only face an open if we aren't UTG
+        if (heroPosLabel !== 'UTG' && Math.random() > 0.5) {
+            scenario = 'FACING_OPEN';
+            // Pick a raiser from players who act BEFORE Hero in ACTION_ORDER
+            const validRaisers = ACTION_ORDER.slice(0, heroActionIdx);
+            if (validRaisers.length > 0) {
+                raiser = validRaisers[Math.floor(Math.random() * validRaisers.length)];
+            } else {
+                scenario = 'RFI'; // Fallback if no valid raisers
+            }
+        }
+
+        setCurrentScenario(scenario);
+        setRaiserPosition(raiser);
 
         const newHand = getRandomHand();
         const newHeroCards = getCardsFromHand(newHand);
@@ -121,33 +144,43 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         }
         setBoardCards(currentBoard);
 
-        if (numBoardCards === 0) setPotSizeBB(1.5);
-        else if (numBoardCards === 3) setPotSizeBB(+(Math.random() * 10 + 4).toFixed(1));
-        else if (numBoardCards === 4) setPotSizeBB(+(Math.random() * 25 + 12).toFixed(1));
-        else setPotSizeBB(+(Math.random() * 60 + 25).toFixed(1));
+        // Pot handled by useMemo for Pre-flop, but for post-flop we might need this:
+        if (numBoardCards > 0) {
+            if (numBoardCards === 3) setPotSizeBB(+(Math.random() * 10 + 4).toFixed(1));
+            else if (numBoardCards === 4) setPotSizeBB(+(Math.random() * 25 + 12).toFixed(1));
+            else setPotSizeBB(+(Math.random() * 60 + 25).toFixed(1));
+        }
 
-        console.log(`[Action] Generated Scenario - Hand: ${newHand}, Pos: ${POSITIONS[newHeroPos]}, Board: ${numBoardCards} cards`);
+        console.log(`[Action] Generated Scenario - Hand: ${newHand}, Scenario: ${scenario}, Hero: ${heroPosLabel}, Raiser: ${raiser || 'None'}`);
     };
 
     // Shuffle and Action Logic
     const handleAction = (userAction?: 'FOLD' | 'CALL' | 'RAISE') => {
         const pos = getPositionLabel(5);
-        const isInRange = isHandInRange(currentHand, pos);
 
-        // Define correct GTO move based on scenario
-        // In RFI, we only Open Raise or Fold. Call should be caught as Limp error.
-        let correctAction: 'FOLD' | 'CALL' | 'RAISE' = isInRange ? 'RAISE' : 'FOLD';
+        // Define correct GTO move using prioritized recommendation logic
+        const correctAction = getRecommendation(currentHand, pos, currentScenario, raiserPosition || undefined);
 
         // Validation Logic
         if (userAction) {
             if (userAction !== correctAction) {
                 let errorExplanation = '';
                 if (userAction === 'CALL') {
-                    errorExplanation = `Limping is not part of a GTO strategy. You should have ${correctAction}ed instead.`;
+                    if (currentScenario === 'RFI') {
+                        errorExplanation = `Limping is not part of a GTO strategy. You should have ${correctAction}ed instead.`;
+                    } else {
+                        errorExplanation = `Calling a raise here is not optimal GTO play. You should have ${correctAction}ed.`;
+                    }
                 } else if (userAction === 'FOLD' && correctAction === 'RAISE') {
-                    errorExplanation = `This hand is strong enough to Open Raise from ${pos}. You missed value by folding.`;
+                    const actionName = currentScenario === 'RFI' ? 'Open Raise' : '3-Bet';
+                    errorExplanation = `This hand is strong enough to ${actionName} from ${pos}. You missed value by folding.`;
                 } else if (userAction === 'RAISE' && correctAction === 'FOLD') {
-                    errorExplanation = `This hand is too weak to Open Raise from ${pos}. It should be a clean fold.`;
+                    const actionName = currentScenario === 'RFI' ? 'Open Raise' : '3-Bet';
+                    errorExplanation = `This hand is too weak to ${actionName} from ${pos}. It should be a clean fold.`;
+                } else if (userAction === 'FOLD' && correctAction === 'CALL') {
+                    errorExplanation = `This hand is strong enough to Call the raise from ${pos}. Folding is too tight.`;
+                } else if (userAction === 'RAISE' && correctAction === 'CALL') {
+                    errorExplanation = `This hand is a good Call, but too weak to 3-Bet. You are overplaying it.`;
                 }
 
                 setModalData({
@@ -168,9 +201,12 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
 
     const toggleHint = () => {
         if (!showHint) {
+            const message = currentScenario === 'RFI'
+                ? `Study the GTO opening range for ${getPositionLabel(5)}.`
+                : `Study the 3-Bet defense range for ${getPositionLabel(5)} vs ${raiserPosition} raise.`;
             setModalData({
                 type: 'HINT',
-                message: `Study the GTO opening range for ${getPositionLabel(5)}.`
+                message
             });
             setShowHint(true);
         } else {
@@ -305,12 +341,6 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     const calculatedSeats = React.useMemo(() => {
         const currentHeroPos = POSITIONS[heroGamePosition];
         const heroActionIdx = ACTION_ORDER.indexOf(currentHeroPos);
-        const shiftedPositions = POSITIONS; // Simplified mapping for 6-max Trainer
-
-        // In this specific trainer, internal seating i=0 is Hero. 
-        // We'll map POSITIONS to fixed seat indices for visual consistency.
-        // POSITIONS is ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN']
-        // We want Hero to be at index 0, so we shift POSITIONS so 'position' is at i=0.
         const heroIdxInPositions = heroGamePosition;
         const visuallyShifted = [...POSITIONS.slice(heroIdxInPositions), ...POSITIONS.slice(0, heroIdxInPositions)];
 
@@ -321,16 +351,31 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
 
             let status: 'active' | 'folded' | 'hero' = 'active';
             let betAmount = 0;
+
             if (isHero) {
                 status = 'hero';
-            } else if (posLabel !== 'SB' && posLabel !== 'BB') {
-                if (actionIdx !== -1 && actionIdx < heroActionIdx) {
-                    status = 'folded';
+            } else {
+                // Determine status based on scenario
+                if (currentScenario === 'RFI') {
+                    // Everyone before Hero has folded
+                    if (actionIdx !== -1 && actionIdx < heroActionIdx && posLabel !== 'SB' && posLabel !== 'BB') {
+                        status = 'folded';
+                    }
+                } else if (currentScenario === 'FACING_OPEN' && raiserPosition) {
+                    const raiserActionIdx = ACTION_ORDER.indexOf(raiserPosition);
+
+                    if (posLabel === raiserPosition) {
+                        status = 'active';
+                        betAmount = 2.5;
+                    } else if (actionIdx < heroActionIdx) {
+                        // Everyone else before Hero is folded
+                        status = 'folded';
+                    }
                 }
             }
 
-            if (posLabel === 'SB') betAmount = 0.5;
-            else if (posLabel === 'BB') betAmount = 1.0;
+            if (posLabel === 'SB') betAmount = Math.max(betAmount, 0.5);
+            else if (posLabel === 'BB') betAmount = Math.max(betAmount, 1.0);
 
             return {
                 seatIndex: i,
@@ -339,7 +384,7 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 betAmount
             };
         });
-    }, [heroGamePosition]);
+    }, [heroGamePosition, currentScenario, raiserPosition]);
 
     const totalPot = React.useMemo(() => {
         return calculatedSeats.reduce((sum, seat) => sum + (seat.betAmount || 0), 0);
@@ -364,11 +409,8 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         <div
             className="trainer-page-container"
             style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100dvh',
+                width: '100%',
+                height: '100%',
                 backgroundColor: isLandscapeMobile ? '#111111' : '#020617',
                 color: 'white',
                 fontFamily: 'Inter, system-ui, sans-serif',
@@ -376,7 +418,6 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 flexDirection: isLandscapeMobile ? 'row' : 'column',
                 padding: 0,
                 overflow: 'hidden',
-                zIndex: 1000
             }}
         >
             {/* Feedback Modal Overlay */}
@@ -435,7 +476,12 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                             </p>
                         </div>
 
-                        <HandGrid currentPosition={getPositionLabel(5)} currentHandNotation={currentHand} />
+                        <HandGrid
+                            currentPosition={getPositionLabel(5)}
+                            currentHandNotation={currentHand}
+                            scenario={currentScenario}
+                            raiserPos={raiserPosition || undefined}
+                        />
 
                         <button
                             onClick={() => { setShowHint(false); setModalData(null); }}
@@ -453,10 +499,10 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 </div>
             )}
 
-            <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
-                {/* Lab Title Banner - Relative position to take space in flex flow */}
+            <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', width: '100%', minHeight: 0 }}>
+                {/* Lab Title Banner (Sub-header) */}
                 <div style={{
-                    paddingTop: '20px',
+                    paddingTop: '15px',
                     paddingBottom: '5px',
                     textAlign: 'center',
                     zIndex: 100,
@@ -464,8 +510,8 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                     flexShrink: 0,
                     minHeight: 0
                 }}>
-                    <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '16px', letterSpacing: '2px', textShadow: '0 2px 5px rgba(0,0,0,1)' }}>
-                        TRAINING LAB <span style={{ color: 'white' }}>| RFI</span>
+                    <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '13px', letterSpacing: '2px', textShadow: '0 2px 5px rgba(0,0,0,1)' }}>
+                        TRAINING LAB <span style={{ color: 'white' }}>| {currentScenario === 'RFI' ? 'RFI' : '3-BET'}</span>
                     </div>
                 </div>
 

@@ -1,4 +1,5 @@
 import GlobalWrapper from '@/components/GlobalWrapper'
+import Header from '@/components/Header'
 import './globals.css'
 
 export const metadata = {
@@ -17,9 +18,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, padding: 0 }}>
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#0a0a0a', color: 'white' }}>
         <GlobalWrapper>
-          {children}
+          <div className="flex flex-col min-h-screen overflow-hidden" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', width: '100vw', overflow: 'hidden' }}>
+            <Header />
+            <main className="flex-1 relative overflow-hidden" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+              {children}
+            </main>
+          </div>
         </GlobalWrapper>
       </body>
     </html>

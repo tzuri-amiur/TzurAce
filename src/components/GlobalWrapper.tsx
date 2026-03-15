@@ -1,57 +1,43 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import GlobalHeader from './GlobalHeader';
+import React from 'react';
+import { UIProvider, useUI } from '../context/UIContext';
+import { TrainerSettingsProvider } from '../context/TrainerSettingsContext';
 import GlobalSidebar from './GlobalSidebar';
 import AuthModal from './AuthModal';
-import { TrainerSettingsProvider } from '../context/TrainerSettingsContext';
 
 export default function GlobalWrapper({ children }: { children: React.ReactNode }) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-    const [currentUser, setCurrentUser] = useState<any>(null);
-
-    useEffect(() => {
-        const savedUser = localStorage.getItem('tzurace_user');
-        if (savedUser) {
-            try {
-                setCurrentUser(JSON.parse(savedUser));
-            } catch (e) {
-                localStorage.removeItem('tzurace_user');
-            }
-        }
-    }, []);
-
-    const handleLogout = () => {
-        setCurrentUser(null);
-        localStorage.removeItem('tzurace_user');
-    };
-
-    const handleAuthSuccess = (user: any) => {
-        setCurrentUser(user);
-        setIsAuthModalOpen(false);
-    };
-
     return (
-        <TrainerSettingsProvider>
-            <GlobalHeader
-                onOpenSidebar={() => setIsSidebarOpen(true)}
-                onOpenAuth={() => setIsAuthModalOpen(true)}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-            />
-            <GlobalSidebar
-                isOpen={isSidebarOpen}
-                onClose={() => setIsSidebarOpen(false)}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                onOpenAuth={() => setIsAuthModalOpen(true)}
-            />
-            <AuthModal
-                isOpen={isAuthModalOpen}
-                onClose={() => setIsAuthModalOpen(false)}
-                onSuccess={handleAuthSuccess}
-            />
-            {children}
-        </TrainerSettingsProvider>
+        <UIProvider>
+            <TrainerSettingsProvider>
+                <GlobalSidebarWrapper />
+                <AuthModalWrapper />
+                {children}
+            </TrainerSettingsProvider>
+        </UIProvider>
+    );
+}
+
+// Wrapper components to provide UI context to components that need it
+function GlobalSidebarWrapper() {
+    const { isSidebarOpen, setSidebarOpen, currentUser, logout, setAuthModalOpen } = useUI();
+    return (
+        <GlobalSidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            currentUser={currentUser}
+            onLogout={logout}
+            onOpenAuth={() => setAuthModalOpen(true)}
+        />
+    );
+}
+
+function AuthModalWrapper() {
+    const { isAuthModalOpen, setAuthModalOpen, setCurrentUser } = useUI();
+    return (
+        <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setAuthModalOpen(false)}
+            onSuccess={setCurrentUser}
+        />
     );
 }

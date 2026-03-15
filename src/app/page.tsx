@@ -17,10 +17,9 @@ export default function LandingPage() {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#0a0a0a',
-      color: '#cbd5e1',
-      fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+      height: '100%',
+      overflowY: 'auto',
+      paddingBottom: '40px'
     }}>
       <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '30px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>

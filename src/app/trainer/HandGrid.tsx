@@ -1,16 +1,29 @@
 "use client";
 import React from 'react';
-import { getHandRank, isHandInRange, RFI_RANGES } from '@/utils/rangeUtils';
+import { getHandRank, getRecommendation, RFI_RANGES, FACING_OPEN_RANGES } from '@/utils/rangeUtils';
 
 const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
 
 interface HandGridProps {
     currentPosition: string;
     currentHandNotation?: string;
+    scenario?: 'RFI' | 'FACING_OPEN';
+    raiserPos?: string;
 }
 
-const HandGrid: React.FC<HandGridProps> = ({ currentPosition, currentHandNotation }) => {
-    const rangePercent = RFI_RANGES[currentPosition] || 0;
+const HandGrid: React.FC<HandGridProps> = ({
+    currentPosition,
+    currentHandNotation,
+    scenario = 'RFI',
+    raiserPos
+}) => {
+    let rangePercent = 0;
+    if (scenario === 'RFI') {
+        rangePercent = RFI_RANGES[currentPosition] || 0;
+    } else if (raiserPos) {
+        const ranges = FACING_OPEN_RANGES[currentPosition]?.[raiserPos] || { threeBet: 0, call: 0 };
+        rangePercent = ranges.threeBet + ranges.call;
+    }
 
     const renderCell = (rowIndex: number, colIndex: number) => {
         const rank1 = RANKS[rowIndex];
@@ -25,7 +38,9 @@ const HandGrid: React.FC<HandGridProps> = ({ currentPosition, currentHandNotatio
             hand = rank2 + rank1 + 'o'; // Offsuit (Row > Col e.g. Row K, Col A)
         }
 
-        const isInRange = isHandInRange(hand, currentPosition);
+        const recommendation = getRecommendation(hand, currentPosition, scenario, raiserPos);
+        const isRaise = recommendation === 'RAISE';
+        const isCall = recommendation === 'CALL';
         const isCurrentHand = hand === currentHandNotation;
         const rank = getHandRank(hand);
 
@@ -40,8 +55,8 @@ const HandGrid: React.FC<HandGridProps> = ({ currentPosition, currentHandNotatio
                     justifyContent: 'center',
                     fontSize: '9px',
                     fontWeight: 'bold',
-                    backgroundColor: isInRange ? '#10b981' : 'rgba(255,255,255,0.05)',
-                    color: isInRange ? 'white' : 'rgba(255,255,255,0.3)',
+                    backgroundColor: isRaise ? '#10b981' : (isCall ? '#3b82f6' : 'rgba(255,255,255,0.05)'),
+                    color: (isRaise || isCall) ? 'white' : 'rgba(255,255,255,0.3)',
                     border: isCurrentHand ? '2px solid #fbbf24' : '1px solid rgba(0,0,0,0.2)',
                     boxShadow: isCurrentHand ? '0 0 10px #fbbf24' : 'none',
                     zIndex: isCurrentHand ? 2 : 1,
@@ -95,12 +110,18 @@ const HandGrid: React.FC<HandGridProps> = ({ currentPosition, currentHandNotatio
                 alignItems: 'center',
                 fontSize: '12px'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '2px' }}></div>
-                    <span style={{ color: '#94a3b8' }}>In Range</span>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '2px' }}></div>
+                        <span style={{ color: '#94a3b8' }}>{scenario === 'RFI' ? 'Raise' : '3-Bet'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '12px', height: '12px', backgroundColor: '#3b82f6', borderRadius: '2px' }}></div>
+                        <span style={{ color: '#94a3b8' }}>Call</span>
+                    </div>
                 </div>
                 <div style={{ fontWeight: 'bold', color: '#10b981' }}>
-                    {currentPosition}: {rangePercent}%
+                    {currentPosition} {scenario === 'FACING_OPEN' ? `vs ${raiserPos}` : ''}: {rangePercent}%
                 </div>
             </div>
         </div>
