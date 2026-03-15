@@ -576,3 +576,11 @@
     /* Ensure no overlap with fixed header/action-bar within 100vh */
   }
 }
+
+/* Height-based scaling for small screens - Prevent pushing buttons out */
+@media (max-height: 700px) {
+  .sim-stage {
+    transform: scale(0.8);
+    transform-origin: center center;
+  }
+}

@@ -459,7 +459,8 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                     textAlign: 'center',
                     zIndex: 100,
                     width: '100%',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    minHeight: 0
                 }}>
                     <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '16px', letterSpacing: '2px', textShadow: '0 2px 5px rgba(0,0,0,1)' }}>
                         TRAINING LAB <span style={{ color: 'white' }}>| RFI</span>
@@ -514,7 +515,8 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                     background: 'rgba(2, 6, 23, 0.95)',
                     borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                     backdropFilter: 'blur(12px)',
-                    zIndex: 110
+                    zIndex: 110,
+                    minHeight: 0
                 }}>
                     <button
                         onClick={() => handleAction('FOLD')}
