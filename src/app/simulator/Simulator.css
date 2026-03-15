@@ -17,8 +17,16 @@
   position: fixed;
   top: 0;
   left: 0;
-  /* Desktop Scale Factor */
-  --table-scale-desktop: 1.5;
+
+  /* --- Chip Scaling System --- */
+  --chip-size-base: 32px;
+  --chip-scale-factor: 0.7;
+  /* Reduce by 20% - easily adjustable here */
+  --chip-size: calc(var(--chip-size-base) * var(--chip-scale-factor));
+  --chip-font-size: calc(11px * var(--chip-scale-factor));
+
+  /* Desktop Scale Factor - Safer value to prevent cut-off */
+  --table-scale-desktop: 1.25;
 }
 
 /* ---- Header ---- */
@@ -75,6 +83,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* keep centered but wrapper will define bounds */
   padding: 0;
   overflow: hidden;
 }
@@ -87,16 +96,18 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  /* max-height so buttons always show below */
-  max-height: calc(100dvh - 180px);
+  /* Removed max-height that was cutting the table */
+  max-height: none;
+  padding: 20px 0;
 }
 
 /* ---- Table Stage (positions seats relative to) ---- */
 .sim-stage {
   position: relative;
   /* Desktop: landscape ratio */
-  width: min(90vw, 900px);
+  width: min(90vw, 860px);
   aspect-ratio: 16 / 7;
+  transition: transform 0.3s ease;
 }
 
 /* ---- Poker Table Ellipse ---- */
@@ -209,22 +220,30 @@
 }
 
 .sim-chip-bet {
-  width: 22px;
-  height: 22px;
+  width: var(--chip-size);
+  height: var(--chip-size);
   box-sizing: border-box;
-  background: radial-gradient(circle at center, #ef4444 40%, #b91c1c 100%);
+  background: radial-gradient(circle at center, #1e3a8a 40%, #1e40af 100%);
   color: white;
-  border: 2px dashed rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: var(--chip-font-size);
   font-weight: 900;
-  box-shadow:
-    inset 0 0 1px rgba(0, 0, 0, 0.5),
-    0 3px 6px rgba(0, 0, 0, 0.6);
-  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.sim-chip-bet::after {
+  content: '';
+  position: absolute;
+  inset: calc(3px * var(--chip-scale-factor));
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .sim-seat-cards {
@@ -254,7 +273,7 @@
 }
 
 .sim-seat-box.folded {
-  opacity: 0.35;
+  opacity: 0.5;
   filter: grayscale(60%);
 }
 
@@ -467,7 +486,8 @@
   .sim-stage {
     width: min(88vw, 340px);
     aspect-ratio: 9 / 14;
-    transform: scale(1.25);
+    transform: scale(1.15);
+    /* Reduced scale slightly to avoid clipping on smaller phones */
   }
 
   /* Ellipse: tall vertical oval */
@@ -554,6 +574,5 @@
     transform: scale(var(--table-scale-desktop));
     transform-origin: center center;
     /* Ensure no overlap with fixed header/action-bar within 100vh */
-    max-height: 80vh;
   }
 }

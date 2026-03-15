@@ -300,6 +300,51 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
         }
     };
 
+    const ACTION_ORDER: Position[] = ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
+
+    const calculatedSeats = React.useMemo(() => {
+        const currentHeroPos = POSITIONS[heroGamePosition];
+        const heroActionIdx = ACTION_ORDER.indexOf(currentHeroPos);
+        const shiftedPositions = POSITIONS; // Simplified mapping for 6-max Trainer
+
+        // In this specific trainer, internal seating i=0 is Hero. 
+        // We'll map POSITIONS to fixed seat indices for visual consistency.
+        // POSITIONS is ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN']
+        // We want Hero to be at index 0, so we shift POSITIONS so 'position' is at i=0.
+        const heroIdxInPositions = heroGamePosition;
+        const visuallyShifted = [...POSITIONS.slice(heroIdxInPositions), ...POSITIONS.slice(0, heroIdxInPositions)];
+
+        return Array.from({ length: 6 }).map((_, i) => {
+            const posLabel = visuallyShifted[i];
+            const actionIdx = ACTION_ORDER.indexOf(posLabel);
+            const isHero = i === 0;
+
+            let status: 'active' | 'folded' | 'hero' = 'active';
+            let betAmount = 0;
+            if (isHero) {
+                status = 'hero';
+            } else if (posLabel !== 'SB' && posLabel !== 'BB') {
+                if (actionIdx !== -1 && actionIdx < heroActionIdx) {
+                    status = 'folded';
+                }
+            }
+
+            if (posLabel === 'SB') betAmount = 0.5;
+            else if (posLabel === 'BB') betAmount = 1.0;
+
+            return {
+                seatIndex: i,
+                status,
+                positionLabel: posLabel,
+                betAmount
+            };
+        });
+    }, [heroGamePosition]);
+
+    const totalPot = React.useMemo(() => {
+        return calculatedSeats.reduce((sum, seat) => sum + (seat.betAmount || 0), 0);
+    }, [calculatedSeats]);
+
     const buttonStyle: React.CSSProperties = {
         padding: '16px 32px',
         borderRadius: '12px',
@@ -316,17 +361,24 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
     };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            backgroundColor: isLandscapeMobile ? '#111111' : '#020617',
-            color: 'white',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            display: 'flex',
-            flexDirection: isLandscapeMobile ? 'row' : 'column',
-            padding: isMobile ? '0' : '10px',
-            overflow: 'hidden',
-            height: '100dvh'
-        }}>
+        <div
+            className="trainer-page-container"
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                backgroundColor: isLandscapeMobile ? '#111111' : '#020617',
+                color: 'white',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                display: 'flex',
+                flexDirection: isLandscapeMobile ? 'row' : 'column',
+                padding: 0,
+                overflow: 'hidden',
+                zIndex: 1000
+            }}
+        >
             {/* Feedback Modal Overlay */}
             {showHint && (
                 <div style={{
@@ -334,7 +386,7 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                     inset: 0,
                     backgroundColor: 'rgba(2, 6, 23, 0.85)',
                     backdropFilter: 'blur(8px)',
-                    zIndex: 200,
+                    zIndex: 1200, /* Higher than Simulator's fixed z-index if any */
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -399,30 +451,88 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 </div>
             )}
 
-            <div style={{ flex: 1, position: 'relative' }}>
+            <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+                {/* Lab Title Banner - Relative position to take space in flex flow */}
                 <div style={{
-                    position: 'absolute',
-                    top: '10px',
-                    left: 0,
-                    right: 0,
-                    zIndex: 100,
+                    paddingTop: '20px',
+                    paddingBottom: '5px',
                     textAlign: 'center',
-                    pointerEvents: 'none'
+                    zIndex: 100,
+                    width: '100%',
+                    flexShrink: 0
                 }}>
-                    <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px', letterSpacing: '2px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                    <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '16px', letterSpacing: '2px', textShadow: '0 2px 5px rgba(0,0,0,1)' }}>
                         TRAINING LAB <span style={{ color: 'white' }}>| RFI</span>
                     </div>
                 </div>
 
-                <Simulator
-                    heroCards={heroCards}
-                    boardCards={boardCards}
-                    potSizeBB={potSizeBB}
-                    numPlayers={6}
-                    heroPosition={getPositionLabel(5)}
-                    onAction={(action) => handleAction(action)}
-                    onHint={toggleHint}
-                />
+                {/* Simulator Area - Perfectly centered in available space with scaling protection */}
+                <div
+                    className="table-container-fixed"
+                    style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        minHeight: 0 /* Important for flexbox to allow shrinking */
+                    }}
+                >
+                    <div style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden'
+                    }}>
+                        <Simulator
+                            heroHand={heroCards}
+                            boardCards={boardCards}
+                            potSizeBB={totalPot}
+                            numPlayers={6}
+                            position={POSITIONS[heroGamePosition]}
+                            showHeader={false}
+                            seats={calculatedSeats}
+                            gameState="PRE_FLOP"
+                        />
+                    </div>
+                </div>
+
+                {/* ── Action Bar ── Pinned at the very bottom, minimal padding */}
+                <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: isMobile ? '8px' : '12px',
+                    padding: isMobile ? '8px 10px 10px' : '10px 20px 12px',
+                    flexShrink: 0,
+                    background: 'rgba(2, 6, 23, 0.95)',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    backdropFilter: 'blur(12px)',
+                    zIndex: 110
+                }}>
+                    <button
+                        onClick={() => handleAction('FOLD')}
+                        style={{ ...buttonStyle, padding: isMobile ? '12px 0' : '12px 24px', backgroundColor: '#1e293b', color: '#f1f5f9', border: '1px solid rgba(255, 255, 255, 0.1)', flex: isMobile ? 1 : 'none', minWidth: isMobile ? '0' : '130px' }}
+                    >FOLD</button>
+                    <button
+                        onClick={() => handleAction('CALL')}
+                        style={{ ...buttonStyle, padding: isMobile ? '12px 0' : '12px 24px', backgroundColor: '#1e3a5f', color: '#60a5fa', border: '1px solid rgba(96, 165, 250, 0.3)', flex: isMobile ? 1 : 'none', minWidth: isMobile ? '0' : '130px' }}
+                    >CALL</button>
+                    <button
+                        onClick={() => handleAction('RAISE')}
+                        style={{ ...buttonStyle, padding: isMobile ? '12px 0' : '12px 24px', backgroundColor: '#10b981', color: '#000', flex: isMobile ? 1 : 'none', minWidth: isMobile ? '0' : '130px' }}
+                    >RAISE</button>
+                    <button
+                        onClick={toggleHint}
+                        style={{ ...buttonStyle, padding: isMobile ? '12px 0' : '12px 24px', backgroundColor: '#fbbf24', color: '#000', flex: isMobile ? 1 : 'none', minWidth: isMobile ? '0' : '130px' }}
+                    >HINT</button>
+                </div>
             </div>
 
             <style jsx>{`

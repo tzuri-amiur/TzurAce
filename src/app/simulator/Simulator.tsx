@@ -42,7 +42,7 @@ function ChipStack({ count = 3 }: { count?: number }) {
 }
 
 // ─── Positions ────────────────────────────────────────────────
-const POSITION_NAMES = ['SB', 'BB', 'UTG', 'UTG+1', 'LJ', 'HJ', 'CO', 'BTN', 'P9', 'P10'];
+const POSITION_NAMES = ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'];
 
 function getPositions(count: number): string[] {
     // Always: first=SB, second=BB, last=BTN
@@ -100,31 +100,42 @@ function getEvenlySpacedEllipseAngles(numPoints: number, rx: number, ry: number,
     return angles;
 }
 
-// ─── Main Simulator Component ─────────────────────────────────
+export interface SeatData {
+    seatIndex: number;
+    status: 'active' | 'folded' | 'hero';
+    positionLabel: string;
+    betAmount?: number;
+}
+
 export interface SimulatorProps {
-    heroCards?: [CardData, CardData];
+    heroHand?: [CardData, CardData];
     boardCards?: CardData[];
     potSizeBB?: number;
     numPlayers?: number;
-    heroPosition?: string;
+    position?: string; // Keep for banner/back-compat
+    feedback?: { msg: string; type: 'success' | 'error' | null };
+    showHeader?: boolean;
     onAction?: (action: 'FOLD' | 'CALL' | 'RAISE', amount?: number) => void;
     onHint?: () => void;
+    seats?: SeatData[];
+    gameState?: 'PRE_FLOP' | 'POST_FLOP';
 }
 
 export default function Simulator({
-    heroCards: propHeroCards,
+    heroHand: propHeroHand,
     boardCards: propBoardCards,
     potSizeBB = 6.0,
     numPlayers: propNumPlayers,
-    heroPosition = 'SB',
-    onAction,
-    onHint
+    position = 'SB',
+    feedback,
+    showHeader = true,
+    seats: propSeats,
+    gameState = 'POST_FLOP'
 }: SimulatorProps) {
     // Default initial state: A full board and initial blinds
     const [localNumPlayers, setLocalNumPlayers] = useState(6);
     const numPlayers = propNumPlayers ?? localNumPlayers;
 
-    const [raiseAmount, setRaiseAmount] = useState(3);
     const [isPortrait, setIsPortrait] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -138,7 +149,7 @@ export default function Simulator({
     ];
 
     // Hero cards: As Ah (fixed as default)
-    const heroCards = propHeroCards || [
+    const heroHand = propHeroHand || [
         { rank: 'A', suit: 'spades' },
         { rank: 'A', suit: 'hearts' },
     ];
@@ -163,25 +174,24 @@ export default function Simulator({
     }, []);
 
     const tableSeats = useMemo(() => {
-        const shiftedPositions = getShiftedPositions(numPlayers, heroPosition);
-
-        const rawSeats = Array.from({ length: numPlayers }).map((_, i) => ({
-            seatIndex: i,
-            isHero: i === 0,
-            isFolded: false,
-            isDealer: shiftedPositions[i] === 'BTN',
-            positionLabel: shiftedPositions[i],
-        }));
-
-        // Use approximate logical aspect ratios to calculate perfectly even arc lengths
         const rx = isPortrait ? 38 * 9 : 46 * 16;
         const ry = isPortrait ? 44 * 14 : 46 * 7;
-
-        // Compute evenly spaced T (parametric angles) along the ellipse perimeter
         const angles = getEvenlySpacedEllipseAngles(numPlayers, rx, ry, 90);
+
+        // Use provided seats or construct default active seats
+        const rawSeats = propSeats || Array.from({ length: numPlayers }).map((_, i) => {
+            const shifted = getShiftedPositions(numPlayers, position);
+            return {
+                seatIndex: i,
+                status: (i === 0 ? 'hero' : 'active') as 'hero' | 'active' | 'folded',
+                positionLabel: shifted[i],
+                betAmount: 0
+            };
+        });
 
         return rawSeats.map((seat, i) => {
             const rad = angles[i];
+            const betVal = seat.betAmount || 0;
 
             // Visual CSS percentages for the Seat Box
             const rPx = isPortrait ? 38 : 46;
@@ -196,7 +206,7 @@ export default function Simulator({
 
             // Push chip stack inwards securely over the green felt
             const pushRadiusX = isPortrait ? 40 : 55;
-            const pushRadiusY = seat.isHero ? (isPortrait ? 85 : 95) : (isPortrait ? 60 : 70);
+            const pushRadiusY = seat.status === 'hero' ? (isPortrait ? 85 : 95) : (isPortrait ? 60 : 70);
 
             const offsetX = -vx * pushRadiusX;
             const offsetY = -vy * pushRadiusY;
@@ -227,40 +237,35 @@ export default function Simulator({
                     top: '50%',
                     zIndex: 40,
                     transform: `translate(calc(-50% + ${offsetX + rightVx * dbGap}px), calc(-50% + ${offsetY + rightVy * dbGap}px))`
-                }
+                },
+                betAmount: betVal
             };
         });
-    }, [numPlayers, isPortrait]);
-
-    const handleAction = useCallback((action: 'FOLD' | 'CALL' | 'RAISE') => {
-        if (onAction) {
-            onAction(action, action === 'RAISE' ? raiseAmount : undefined);
-        } else {
-            console.log(`[Simulator] Hero action: ${action}${action === 'RAISE' ? ` to ${raiseAmount} BB` : ''}`);
-        }
-    }, [raiseAmount, onAction]);
+    }, [numPlayers, isPortrait, position, propSeats]);
 
     if (!mounted) return null;
 
     return (
         <div className="sim-root">
             {/* ── Header ── */}
-            <header className="sim-header">
-                <div className="sim-brand">Tzur<span>Ace</span> <span style={{ fontWeight: 400, fontSize: '0.9rem', color: '#64748b' }}>| Simulator</span></div>
-                <div className="sim-controls-row">
-                    <span className="sim-players-label">Players:</span>
-                    <select
-                        className="sim-players-select"
-                        value={numPlayers}
-                        disabled={!!propNumPlayers}
-                        onChange={e => setLocalNumPlayers(Number(e.target.value))}
-                    >
-                        {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                            <option key={n} value={n}>{n}</option>
-                        ))}
-                    </select>
-                </div>
-            </header>
+            {showHeader && (
+                <header className="sim-header">
+                    <div className="sim-brand">Tzur<span>Ace</span> <span style={{ fontWeight: 400, fontSize: '0.9rem', color: '#64748b' }}>| Simulator</span></div>
+                    <div className="sim-controls-row">
+                        <span className="sim-players-label">Players:</span>
+                        <select
+                            className="sim-players-select"
+                            value={numPlayers}
+                            disabled={!!propNumPlayers}
+                            onChange={e => setLocalNumPlayers(Number(e.target.value))}
+                        >
+                            {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                <option key={n} value={n}>{n}</option>
+                            ))}
+                        </select>
+                    </div>
+                </header>
+            )}
 
             {/* ── Main Body ── */}
             <main className="sim-body">
@@ -276,18 +281,21 @@ export default function Simulator({
                             {/* Board & Pot */}
                             <div className="sim-middle-container">
                                 <div className="sim-pot">
+                                    {gameState !== 'PRE_FLOP' && <ChipStack count={Math.floor(potSizeBB / 2)} />}
                                     <div className="sim-pot-label">POT: {potSizeBB} BB</div>
                                 </div>
-                                <div className="sim-board">
-                                    {boardCards.map((card, idx) => (
-                                        <SimCard
-                                            key={idx}
-                                            {...card}
-                                            width={boardCardW}
-                                            height={boardCardH}
-                                        />
-                                    ))}
-                                </div>
+                                {gameState !== 'PRE_FLOP' && (
+                                    <div className="sim-board">
+                                        {boardCards.map((card, idx) => (
+                                            <SimCard
+                                                key={idx}
+                                                {...card}
+                                                width={boardCardW}
+                                                height={boardCardH}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -299,18 +307,18 @@ export default function Simulator({
                                     className="sim-seat"
                                     style={seat.style}
                                 >
-                                    {/* Cards above the seat box */}
+                                    {/* Player Cards */}
                                     <div className="sim-seat-cards">
-                                        {seat.isHero ? (
+                                        {seat.status === 'hero' ? (
                                             <>
                                                 <div style={{ transform: 'rotate(-4deg)' }}>
-                                                    <SimCard {...heroCards[0]} width={heroCardW} height={heroCardH} />
+                                                    <SimCard {...heroHand[0]} width={heroCardW} height={heroCardH} />
                                                 </div>
                                                 <div style={{ transform: 'rotate(4deg)', marginLeft: isPortrait ? '-14px' : '-18px' }}>
-                                                    <SimCard {...heroCards[1]} width={heroCardW} height={heroCardH} />
+                                                    <SimCard {...heroHand[1]} width={heroCardW} height={heroCardH} />
                                                 </div>
                                             </>
-                                        ) : (
+                                        ) : seat.status === 'active' ? (
                                             <>
                                                 <div style={{ transform: 'rotate(-4deg)' }}>
                                                     <SimCardBack width={villainCardW} height={villainCardH} />
@@ -319,28 +327,34 @@ export default function Simulator({
                                                     <SimCardBack width={villainCardW} height={villainCardH} />
                                                 </div>
                                             </>
-                                        )}
+                                        ) : null}
                                     </div>
 
                                     {/* Seat Box */}
-                                    <div className={`sim-seat-box ${seat.isHero ? 'hero' : ''} ${seat.isFolded ? 'folded' : ''}`}>
+                                    <div className={`sim-seat-box ${seat.status === 'hero' ? 'hero' : ''} ${seat.status === 'folded' ? 'folded' : ''}`}>
                                         <div className="sim-seat-pos">{seat.positionLabel}</div>
-                                        <div className="sim-seat-name">{seat.isHero ? 'HERO' : `P${seat.seatIndex}`}</div>
+                                        <div className="sim-seat-name">{seat.status === 'hero' ? 'HERO' : `P${seat.seatIndex}`}</div>
                                     </div>
 
-                                    {/* Player Action Area (Chips & Dealer Button) */}
-                                    {(!seat.isFolded || seat.isDealer) && (
-                                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                                            {!seat.isFolded && (
-                                                <div className="sim-chip-bet" style={seat.chipStyle}>1</div>
-                                            )}
-                                            {seat.isDealer && (
-                                                <div className="sim-dealer-btn" style={seat.dealerStyle}>
-                                                    D
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                    {/* Player Action Area (Chips & Dealer Button) - Logic moved: render if status allows or is BTN */}
+                                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                                        {seat.status !== 'folded' && seat.betAmount && seat.betAmount > 0 ? (
+                                            <div
+                                                className="sim-chip-bet"
+                                                style={{
+                                                    ...seat.chipStyle,
+                                                    background: seat.betAmount === 0.5 ? '#f59e0b' : (seat.betAmount === 1.0 ? '#ef4444' : undefined)
+                                                }}
+                                            >
+                                                {seat.betAmount}
+                                            </div>
+                                        ) : null}
+                                        {seat.positionLabel === 'BTN' && (
+                                            <div className="sim-dealer-btn" style={seat.dealerStyle}>
+                                                D
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}
@@ -348,26 +362,12 @@ export default function Simulator({
                 </div>
             </main>
 
-            {/* ── Action Bar ── */}
-            <div className="sim-action-bar">
-                {onHint && (
-                    <button className="sim-btn sim-btn-hint" onClick={onHint} style={{ backgroundColor: '#eab308' }}>
-                        HINT
-                    </button>
-                )}
-                <button className="sim-btn sim-btn-fold" onClick={() => handleAction('FOLD')}>FOLD</button>
-                <button className="sim-btn sim-btn-call" onClick={() => handleAction('CALL')}>CALL</button>
-                <button className="sim-btn sim-btn-raise" onClick={() => handleAction('RAISE')}>RAISE</button>
-                <input
-                    type="number"
-                    className="sim-raise-input"
-                    value={raiseAmount}
-                    min={2}
-                    max={200}
-                    onChange={e => setRaiseAmount(Number(e.target.value))}
-                    aria-label="Raise amount in BB"
-                />
-            </div>
+            {/* Feedback Toast */}
+            {feedback?.msg && (
+                <div className={`sim-feedback-toast ${feedback.type}`}>
+                    {feedback.msg}
+                </div>
+            )}
         </div>
     );
 }
