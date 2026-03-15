@@ -368,7 +368,7 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                 top: 0,
                 left: 0,
                 width: '100vw',
-                height: '100vh',
+                height: '100dvh',
                 backgroundColor: isLandscapeMobile ? '#111111' : '#020617',
                 color: 'white',
                 fontFamily: 'Inter, system-ui, sans-serif',
@@ -395,10 +395,12 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                     <div style={{
                         width: '100%',
                         maxWidth: '550px',
+                        maxHeight: '90dvh',
+                        overflowY: 'auto',
                         backgroundColor: '#0f172a',
                         borderRadius: '24px',
                         border: `2px solid ${modalData?.type === 'ERROR' ? '#ef4444' : '#10b981'}`,
-                        padding: '32px',
+                        padding: isMobile ? '20px' : '32px',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                         display: 'flex',
                         flexDirection: 'column',
@@ -488,7 +490,9 @@ export default function TrainerClient({ initialHand, initialCards }: TrainerClie
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        transform: (showHint && isMobile) ? 'scale(0.6)' : 'none',
+                        transition: 'transform 0.3s ease'
                     }}>
                         <Simulator
                             heroHand={heroCards}
